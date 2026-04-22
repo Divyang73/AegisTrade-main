@@ -1,0 +1,4 @@
+{
+  "/trading/page": "app/trading/page.js",
+  "/algorithms/page": "app/algorithms/page.js"
+}
