@@ -45,7 +45,7 @@ BEGIN
     INSERT INTO users (user_id, is_bot)
     VALUES (
         p_user_id,
-        CASE WHEN p_user_id IN ('algo-sma', 'algo-rsi', 'market-maker') THEN TRUE ELSE FALSE END
+        CASE WHEN p_user_id IN ('algo-sma', 'algo-rsi', 'algo-ema', 'algo-bollinger', 'algo-macd', 'algo-donchian', 'algo-roc', 'algo-pairs', 'market-maker') THEN TRUE ELSE FALSE END
     )
     ON CONFLICT (user_id) DO NOTHING;
 
@@ -372,12 +372,24 @@ $$;
 INSERT INTO users (user_id, is_bot) VALUES
     ('human-user', FALSE),
     ('algo-sma', TRUE),
-    ('algo-rsi', TRUE)
+    ('algo-rsi', TRUE),
+    ('algo-ema', TRUE),
+    ('algo-bollinger', TRUE),
+    ('algo-macd', TRUE),
+    ('algo-donchian', TRUE),
+    ('algo-roc', TRUE),
+    ('algo-pairs', TRUE)
 ON CONFLICT (user_id) DO NOTHING;
 
 INSERT INTO wallets (user_id, cash_balance) VALUES
     ('human-user', 100000),
     ('algo-sma', 100000),
-    ('algo-rsi', 100000)
+    ('algo-rsi', 100000),
+    ('algo-ema', 100000),
+    ('algo-bollinger', 100000),
+    ('algo-macd', 100000),
+    ('algo-donchian', 100000),
+    ('algo-roc', 100000),
+    ('algo-pairs', 100000)
 ON CONFLICT (user_id) DO UPDATE
 SET cash_balance = EXCLUDED.cash_balance;

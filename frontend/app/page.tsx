@@ -1,5 +1,5 @@
-import { redirect } from 'next/navigation';
+import { HomeOverview } from '@/components/home-overview';
 
 export default function HomePage() {
-  redirect('/trading');
+  return <HomeOverview />;
 }

@@ -203,6 +203,23 @@ export function TradingDashboard() {
       : null;
 
   const notional = portfolio?.positions.reduce((sum, position) => sum + position.market_value, 0) ?? 0;
+  const totalQuantity = portfolio?.positions.reduce((sum, position) => sum + position.quantity, 0) ?? 0;
+  const latestReferencePrice = latestBar?.close ?? history.at(-1)?.close ?? null;
+  const latestUserTrade = useMemo(() => {
+    const selectedTrade = recentTrades.find(
+      (trade) =>
+        (trade.buyer_id === 'human-user' || trade.seller_id === 'human-user') && trade.symbol === selectedSymbol,
+    );
+    if (selectedTrade) return selectedTrade;
+
+    return recentTrades.find((trade) => trade.buyer_id === 'human-user' || trade.seller_id === 'human-user') ?? null;
+  }, [recentTrades, selectedSymbol]);
+  const lastTradeProfit =
+    latestReferencePrice != null && latestUserTrade
+      ? latestUserTrade.buyer_id === 'human-user'
+        ? (latestReferencePrice - latestUserTrade.price) * latestUserTrade.quantity
+        : (latestUserTrade.price - latestReferencePrice) * latestUserTrade.quantity
+      : null;
 
   return (
     <div className="space-y-6 pb-10">
@@ -384,41 +401,39 @@ export function TradingDashboard() {
           <div>
             <div className="flex items-center gap-2 text-xs uppercase tracking-[0.24em] text-zinc-500">
               <LayoutGrid className="h-4 w-4 text-violet-300" />
-              Portfolio
+              Wallet status
             </div>
-            <h2 className="mt-2 text-lg font-semibold text-white">Human account snapshot</h2>
+            <h2 className="mt-2 text-lg font-semibold text-white">Human wallet snapshot</h2>
           </div>
-          <Badge>{portfolio?.positions.length ?? 0} positions</Badge>
+          <Badge>{portfolio ? formatCurrency(portfolio.cash_balance) : '--'}</Badge>
         </div>
 
-        <div className="overflow-hidden rounded-2xl border border-white/10">
-          <table className="w-full text-sm">
-            <thead className="bg-white/[0.03] text-left text-xs uppercase tracking-[0.2em] text-zinc-500">
-              <tr>
-                <th className="px-4 py-3">Symbol</th>
-                <th className="px-4 py-3">Quantity</th>
-                <th className="px-4 py-3">Last Price</th>
-                <th className="px-4 py-3">Market Value</th>
-              </tr>
-            </thead>
-            <tbody>
-              {(portfolio?.positions ?? []).map((position) => (
-                <tr key={position.symbol} className="border-t border-white/5 text-zinc-200">
-                  <td className="px-4 py-3 font-medium">{position.symbol}</td>
-                  <td className="px-4 py-3">{position.quantity}</td>
-                  <td className="px-4 py-3">{formatCurrency(position.last_price)}</td>
-                  <td className="px-4 py-3">{formatCurrency(position.market_value)}</td>
-                </tr>
-              ))}
-              {portfolio && portfolio.positions.length === 0 ? (
-                <tr>
-                  <td colSpan={4} className="px-4 py-8 text-center text-zinc-500">
-                    No open positions.
-                  </td>
-                </tr>
-              ) : null}
-            </tbody>
-          </table>
+        <div className="grid gap-3 md:grid-cols-3">
+          <Stat
+            label="Current wallet cash"
+            value={portfolio ? formatCurrency(portfolio.cash_balance) : '--'}
+            delta={portfolio ? 'Available buying power' : 'Loading wallet'}
+          />
+          <Stat
+            label="Total quantity held"
+            value={portfolio ? String(totalQuantity) : '--'}
+            delta={portfolio ? `Across ${portfolio.positions.length} positions` : 'Loading positions'}
+          />
+          <Stat
+            label="Last trade profit"
+            value={lastTradeProfit != null ? formatCurrency(lastTradeProfit) : '--'}
+            delta={latestUserTrade ? `${latestUserTrade.symbol} • ${latestUserTrade.buyer_id === 'human-user' ? 'buy' : 'sell'} fill` : 'No user trade yet'}
+          />
+        </div>
+
+        <div className="mt-4 rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-sm text-zinc-400">
+          <div className="flex items-center gap-2 text-white">
+            <LayoutGrid className="h-4 w-4 text-violet-300" />
+            Wallet summary
+          </div>
+          <p className="mt-2 leading-6">
+            This panel replaces the empty holdings table with your live wallet cash, the total quantity currently held, and the estimated profit or loss on your most recent trade using the latest market price.
+          </p>
         </div>
       </Panel>
     </div>

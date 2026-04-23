@@ -67,3 +67,58 @@ class HistoricalBar(BaseModel):
     close: float
     volume: int
 
+
+class EquityPoint(BaseModel):
+    timestamp: str
+    equity: float
+
+
+class IndicatorPoint(BaseModel):
+    timestamp: str
+    value: float
+
+
+class IndicatorSeries(BaseModel):
+    name: str
+    color: str
+    points: list[IndicatorPoint]
+
+
+class OrderActivityEntry(BaseModel):
+    id: str
+    symbol: str
+    side: str
+    order_type: str
+    price: float | None
+    quantity: int
+    filled_quantity: int
+    status: str
+    timestamp: str
+
+
+class StrategyMetrics(BaseModel):
+    realized_pnl: float
+    unrealized_pnl: float
+    total_pnl: float
+    win_rate: float
+    sharpe_ratio: float | None
+    total_trades: int
+    avg_trade_size: float
+    drawdown: float
+    cash_balance: float
+    equity: float
+
+
+class StrategyDetailResponse(BaseModel):
+    slug: str
+    user_id: str
+    symbol: str
+    live: bool
+    metrics: StrategyMetrics
+    current_positions: list[PortfolioPosition]
+    live_trades: list[TradeFeedEntry]
+    order_activity: list[OrderActivityEntry]
+    equity_curve: list[EquityPoint]
+    market_history: list[HistoricalBar]
+    overlays: list[IndicatorSeries]
+
