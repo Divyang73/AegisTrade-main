@@ -6,7 +6,8 @@ import { AlertTriangle, BarChart3, CandlestickChart, LayoutGrid, RefreshCw, Tren
 
 import { API_BASE, apiGet } from '@/lib/api';
 import type { MarketBar, MarketTick, OrderBook, Portfolio, RecentTrade } from '@/lib/types';
-import { Badge, Button, Panel, Select } from '@/components/ui';
+import { Badge, Button, Panel, Select, Tooltip, LabelWithTooltip } from '@/components/ui';
+import { tradingGlossary } from '@/lib/trading-glossary';
 
 const SYMBOLS = ['AAPL', 'MSFT', 'TSLA'];
 
@@ -214,9 +215,24 @@ export function TradingDashboard() {
         </div>
 
         <div className="mt-5 grid gap-3 md:grid-cols-3">
-          <Stat label="Last close" value={latestBar ? formatCurrency(latestBar.close) : '--'} delta={latestBar ? `${selectedSymbol} • ${latestBar.volume.toLocaleString()} vol` : 'Waiting for market tick'} />
-          <Stat label="Bid / Ask spread" value={spread != null ? formatCompact(spread) : '--'} delta={spread != null ? 'Live order book spread' : 'No book data yet'} />
-          <Stat label="Portfolio equity" value={portfolio ? formatCurrency(portfolio.equity) : '--'} delta={portfolio ? `Cash ${formatCurrency(portfolio.cash_balance)} • Positions ${formatCurrency(notional)}` : 'Loading account'} />
+          <Stat 
+            label="Last close" 
+            value={latestBar ? formatCurrency(latestBar.close) : '--'} 
+            delta={latestBar ? `${selectedSymbol} • ${latestBar.volume.toLocaleString()} vol` : 'Waiting for market tick'}
+            tooltip={tradingGlossary.pnl.definition}
+          />
+          <Stat 
+            label="Bid / Ask spread" 
+            value={spread != null ? formatCompact(spread) : '--'} 
+            delta={spread != null ? 'Live order book spread' : 'No book data yet'}
+            tooltip={tradingGlossary.spread.howToUse}
+          />
+          <Stat 
+            label="Portfolio equity" 
+            value={portfolio ? formatCurrency(portfolio.equity) : '--'} 
+            delta={portfolio ? `Cash ${formatCurrency(portfolio.cash_balance)} • Positions ${formatCurrency(notional)}` : 'Loading account'}
+            tooltip={tradingGlossary.portfolio.howToUse}
+          />
         </div>
       </Panel>
 
@@ -234,6 +250,7 @@ export function TradingDashboard() {
               <div className="flex items-center gap-2 text-xs uppercase tracking-[0.24em] text-zinc-500">
                 <CandlestickChart className="h-4 w-4 text-emerald-300" />
                 Candles
+                <Tooltip content="Candlestick chart showing price movement over time. Each candle represents a time period (e.g., minute or hour). Green candles show when price went up; red candles show when price went down." />
               </div>
               <h2 className="mt-2 text-lg font-semibold text-white">{selectedSymbol} price action</h2>
             </div>
@@ -248,6 +265,7 @@ export function TradingDashboard() {
               <div className="flex items-center gap-2 text-xs uppercase tracking-[0.24em] text-zinc-500">
                 <LayoutGrid className="h-4 w-4 text-sky-300" />
                 Order book
+                <Tooltip content={tradingGlossary.bid.definition + ' ' + tradingGlossary.ask.definition} title="Order Book" />
               </div>
               <h2 className="mt-2 text-lg font-semibold text-white">Top of book</h2>
             </div>
@@ -255,8 +273,14 @@ export function TradingDashboard() {
           </div>
 
           <div className="grid grid-cols-2 gap-3 text-xs uppercase tracking-[0.16em] text-zinc-500">
-            <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 p-2 text-emerald-200">Bids</div>
-            <div className="rounded-xl border border-red-500/20 bg-red-500/10 p-2 text-red-200">Asks</div>
+            <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 p-2 text-emerald-200 flex items-center gap-2">
+              <span>Bids</span>
+              <Tooltip content={tradingGlossary.bid.definition} title="Bid Price" />
+            </div>
+            <div className="rounded-xl border border-red-500/20 bg-red-500/10 p-2 text-red-200 flex items-center gap-2">
+              <span>Asks</span>
+              <Tooltip content={tradingGlossary.ask.definition} title="Ask Price" />
+            </div>
           </div>
 
           <div className="mt-3 grid grid-cols-2 gap-3">
@@ -268,6 +292,7 @@ export function TradingDashboard() {
             <div className="flex items-center gap-2 text-zinc-200">
               <BarChart3 className="h-4 w-4" />
               Live tape
+              <Tooltip content={tradingGlossary.trade.definition + ' Hover over each trade to see if a bot or human made it.'} title="Trade Tape" />
             </div>
             <div className="mt-2 space-y-2">
               {(recentTrades.slice(0, 4) || []).map((trade) => (
@@ -288,6 +313,7 @@ export function TradingDashboard() {
               <div className="flex items-center gap-2 text-xs uppercase tracking-[0.24em] text-zinc-500">
                 <TrendingUp className="h-4 w-4 text-emerald-300" />
                 Liquidity
+                <Tooltip content={tradingGlossary.liquidity.definition + ' ' + tradingGlossary.liquidity.howToUse} title="Market Liquidity" />
               </div>
               <h2 className="mt-2 text-lg font-semibold text-white">Market depth snapshot</h2>
             </div>
@@ -296,14 +322,20 @@ export function TradingDashboard() {
 
           <div className="grid grid-cols-2 gap-3 text-xs text-zinc-400">
             <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-3">
-              <TrendingUp className="h-4 w-4 text-emerald-300" />
-              <div className="mt-2">Buy-side liquidity</div>
-              <div className="mt-1 text-white">{orderBook?.bids.length ?? 0} levels</div>
+              <div className="flex items-center gap-2">
+                <TrendingUp className="h-4 w-4 text-emerald-300" />
+                <span>Buy-side liquidity</span>
+                <Tooltip content="Number of buy orders at different price levels. More levels = easier to sell your shares." />
+              </div>
+              <div className="mt-2 text-white">{orderBook?.bids.length ?? 0} levels</div>
             </div>
             <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-3">
-              <TrendingDown className="h-4 w-4 text-red-300" />
-              <div className="mt-2">Sell-side liquidity</div>
-              <div className="mt-1 text-white">{orderBook?.asks.length ?? 0} levels</div>
+              <div className="flex items-center gap-2">
+                <TrendingDown className="h-4 w-4 text-red-300" />
+                <span>Sell-side liquidity</span>
+                <Tooltip content="Number of sell orders at different price levels. More levels = easier to buy shares." />
+              </div>
+              <div className="mt-2 text-white">{orderBook?.asks.length ?? 0} levels</div>
             </div>
           </div>
         </Panel>
@@ -313,10 +345,13 @@ export function TradingDashboard() {
   );
 }
 
-function Stat({ label, value, delta }: { label: string; value: string; delta: string }) {
+function Stat({ label, value, delta, tooltip }: { label: string; value: string; delta: string; tooltip?: string }) {
   return (
     <div className="rounded-2xl border border-white/10 bg-black/20 p-4 shadow-glow">
-      <div className="text-[11px] uppercase tracking-[0.24em] text-zinc-500">{label}</div>
+      <div className="flex items-center gap-2">
+        <span className="text-[11px] uppercase tracking-[0.24em] text-zinc-500">{label}</span>
+        {tooltip && <Tooltip content={tooltip} />}
+      </div>
       <div className="mt-2 text-2xl font-semibold text-white">{value}</div>
       <div className="mt-1 text-xs text-zinc-400">{delta}</div>
     </div>

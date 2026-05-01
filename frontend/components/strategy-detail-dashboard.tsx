@@ -8,7 +8,8 @@ import { AlertTriangle, BookOpen, ChartCandlestick, Clock3, RefreshCw, Scale, Wa
 import { apiGet } from '@/lib/api';
 import { getStrategyContent, type StrategyContent } from '@/lib/strategy-content';
 import type { StrategyDetail } from '@/lib/types';
-import { Badge, Button, Panel, StatCard } from '@/components/ui';
+import { Badge, Button, Panel, StatCard, Tooltip } from '@/components/ui';
+import { tradingGlossary } from '@/lib/trading-glossary';
 
 function formatCurrency(value: number) {
   return new Intl.NumberFormat('en-US', {
@@ -167,11 +168,36 @@ export function StrategyDetailDashboard({ slug }: { slug: string }) {
         ) : null}
 
         <div className="mt-5 grid gap-3 md:grid-cols-3 lg:grid-cols-5">
-          <StatCard label="Total PnL" value={metrics ? formatCurrency(metrics.total_pnl) : '--'} tone={metrics && metrics.total_pnl >= 0 ? 'positive' : 'negative'} />
-          <StatCard label="Win Rate" value={metrics ? formatPercent(metrics.win_rate) : '--'} tone="neutral" />
-          <StatCard label="Sharpe Ratio" value={metrics?.sharpe_ratio != null ? formatNumber(metrics.sharpe_ratio) : '--'} tone="neutral" />
-          <StatCard label="Total Trades" value={metrics ? String(metrics.total_trades) : '--'} tone="neutral" />
-          <StatCard label="Drawdown" value={metrics ? formatPercent(metrics.drawdown) : '--'} tone="negative" />
+          <StatCard 
+            label="Total PnL" 
+            value={metrics ? formatCurrency(metrics.total_pnl) : '--'} 
+            tone={metrics && metrics.total_pnl >= 0 ? 'positive' : 'negative'}
+            tooltip={tradingGlossary.pnl.definition}
+          />
+          <StatCard 
+            label="Win Rate" 
+            value={metrics ? formatPercent(metrics.win_rate) : '--'} 
+            tone="neutral"
+            tooltip={tradingGlossary.winRate.definition}
+          />
+          <StatCard 
+            label="Sharpe Ratio" 
+            value={metrics?.sharpe_ratio != null ? formatNumber(metrics.sharpe_ratio) : '--'} 
+            tone="neutral"
+            tooltip={tradingGlossary.sharpeRatio.howToUse}
+          />
+          <StatCard 
+            label="Total Trades" 
+            value={metrics ? String(metrics.total_trades) : '--'} 
+            tone="neutral"
+            tooltip={tradingGlossary.trade.definition}
+          />
+          <StatCard 
+            label="Drawdown" 
+            value={metrics ? formatPercent(metrics.drawdown) : '--'} 
+            tone="negative"
+            tooltip={tradingGlossary.maxDrawdown.definition}
+          />
         </div>
       </Panel>
 
@@ -196,6 +222,7 @@ export function StrategyDetailDashboard({ slug }: { slug: string }) {
               <div className="flex items-center gap-2 text-xs uppercase tracking-[0.24em] text-zinc-500">
                 <Wallet className="h-4 w-4 text-sky-300" />
                 Position and PnL
+                <Tooltip content="Your current cash balance, total equity (cash + positions value), and average size per trade." />
               </div>
               <h2 className="mt-2 text-lg font-semibold text-white">Current account state</h2>
             </div>
@@ -204,15 +231,24 @@ export function StrategyDetailDashboard({ slug }: { slug: string }) {
 
           <div className="space-y-3 text-sm">
             <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
-              <div className="text-xs uppercase tracking-[0.2em] text-zinc-500">Cash balance</div>
+              <div className="flex items-center gap-2 text-xs uppercase tracking-[0.2em] text-zinc-500">
+                <span>Cash balance</span>
+                <Tooltip content={tradingGlossary.cash.definition} />
+              </div>
               <div className="mt-2 text-xl font-semibold text-white">{metrics ? formatCurrency(metrics.cash_balance) : '--'}</div>
             </div>
             <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
-              <div className="text-xs uppercase tracking-[0.2em] text-zinc-500">Equity</div>
+              <div className="flex items-center gap-2 text-xs uppercase tracking-[0.2em] text-zinc-500">
+                <span>Equity</span>
+                <Tooltip content={tradingGlossary.portfolio.definition} />
+              </div>
               <div className="mt-2 text-xl font-semibold text-white">{metrics ? formatCurrency(metrics.equity) : '--'}</div>
             </div>
             <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
-              <div className="text-xs uppercase tracking-[0.2em] text-zinc-500">Avg trade size</div>
+              <div className="flex items-center gap-2 text-xs uppercase tracking-[0.2em] text-zinc-500">
+                <span>Avg trade size</span>
+                <Tooltip content="Average dollar value of each trade. Larger sizes mean more aggressive position sizing." />
+              </div>
               <div className="mt-2 text-xl font-semibold text-white">{metrics ? formatNumber(metrics.avg_trade_size) : '--'}</div>
             </div>
           </div>
@@ -225,6 +261,7 @@ export function StrategyDetailDashboard({ slug }: { slug: string }) {
             <div className="flex items-center gap-2 text-xs uppercase tracking-[0.24em] text-zinc-500">
               <AlertTriangle className="h-4 w-4 text-amber-300" />
               Strategy debug view
+              <Tooltip content="Shows the raw data inputs, calculated indicators, buy/sell signals, and reasons why no trade was placed." />
             </div>
             <h2 className="mt-2 text-lg font-semibold text-white">Latest input data, indicators, signal decision, and reason for no trade</h2>
           </div>
@@ -273,7 +310,8 @@ export function StrategyDetailDashboard({ slug }: { slug: string }) {
         <Panel className="p-4">
           <div className="mb-3 flex items-center gap-2 text-xs uppercase tracking-[0.2em] text-zinc-500">
             <Scale className="h-4 w-4 text-emerald-300" />
-            Current positions
+            <span>Current positions</span>
+            <Tooltip content={tradingGlossary.position.definition + ' Each row shows a stock you currently own with its quantity and market value.'} />
           </div>
           <div className="overflow-hidden rounded-2xl border border-white/10">
             <table className="w-full text-sm">
