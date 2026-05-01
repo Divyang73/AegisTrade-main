@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 
 import './globals.css';
+import { ServerClock } from '@/components/server-clock';
 
 export const metadata: Metadata = {
   title: 'AegisTrade',
@@ -39,6 +40,7 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
                 <Link className="rounded-xl border border-white/10 px-4 py-2 text-zinc-300 transition hover:border-emerald-300/30 hover:bg-emerald-300/10 hover:text-white" href="/learn">
                   Learn
                 </Link>
+                <ServerClock />
               </nav>
             </header>
             <main className="relative flex-1">{children}</main>

@@ -3,10 +3,11 @@ from __future__ import annotations
 import statistics
 from collections import defaultdict
 from datetime import datetime, timezone
+from time import perf_counter
 from decimal import Decimal
 from math import sqrt
 
-from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect, Request
 from fastapi.middleware.cors import CORSMiddleware
 
 from .config import settings
@@ -38,6 +39,25 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.middleware("http")
+async def add_server_time_and_latency(request: Request, call_next):
+    start = perf_counter()
+    response = await call_next(request)
+    elapsed_ms = (perf_counter() - start) * 1000
+    response.headers["X-Server-Time"] = datetime.now(timezone.utc).isoformat()
+    response.headers["X-Process-Time-MS"] = f"{elapsed_ms:.3f}"
+    return response
+
+
+@app.get("/api/time")
+async def server_time() -> dict[str, object]:
+    now = datetime.now(timezone.utc)
+    return {
+        "iso": now.isoformat(),
+        "epoch_ms": int(now.timestamp() * 1000),
+    }
 
 
 INITIAL_EQUITY = 100000.0
@@ -91,10 +111,45 @@ async def _seed_market_maker() -> None:
             )
 
 
+async def _seed_bots() -> None:
+    """Initialize all 7 algorithm bots with initial capital."""
+    pool = await get_pool()
+    bot_user_ids = [
+        "algo-sma",
+        "algo-rsi",
+        "algo-ema",
+        "algo-bollinger",
+        "algo-macd",
+        "algo-donchian",
+        "algo-roc",
+    ]
+    async with pool.acquire() as conn:
+        for bot_id in bot_user_ids:
+            await conn.execute(
+                """
+                INSERT INTO users (user_id, is_bot)
+                VALUES ($1, TRUE)
+                ON CONFLICT (user_id) DO UPDATE SET is_bot = EXCLUDED.is_bot
+                """,
+                bot_id,
+            )
+            await conn.execute(
+                """
+                INSERT INTO wallets AS w (user_id, cash_balance)
+                VALUES ($1, $2)
+                ON CONFLICT (user_id) DO UPDATE
+                SET cash_balance = GREATEST(w.cash_balance, EXCLUDED.cash_balance)
+                """,
+                bot_id,
+                INITIAL_EQUITY,
+            )
+
+
 @app.on_event("startup")
 async def on_startup() -> None:
     pool = await init_pool()
     await _seed_market_maker()
+    await _seed_bots()
     app.state.streamer = MarketStreamer(
         pool=pool,
         interval_seconds=settings.simulation_interval_seconds,

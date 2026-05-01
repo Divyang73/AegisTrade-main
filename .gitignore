@@ -1,0 +1,7 @@
+.venv/
+__pycache__/
+*.pyc
+logs/
+frontend/.next/
+node_modules/
+backend/main_fixed.py

@@ -10,7 +10,7 @@ This repository is currently configured as a single-user teaching/demo platform.
 - Lets the human trader place market and limit orders.
 - Routes every order into PostgreSQL for matching and execution.
 - Runs algorithmic bots that place trades automatically.
-- Shows live trading, portfolio data, and bot statistics in the browser.
+- Shows live trading, portfolio data, bot statistics, and a global UTC date/time clock in the browser.
 
 ## Tech Stack
 
@@ -79,7 +79,30 @@ Then open:
 - `http://localhost:3000/trading`
 - `http://localhost:3000/algorithms`
 
-### 4. Start the bots
+### 4. Start backend + all bots at once (recommended)
+
+From the repository root:
+
+```bash
+chmod +x start_all.sh
+./start_all.sh
+```
+
+This starts:
+
+- backend (`backend.main:app`)
+- market maker (`bots/market_maker.py`)
+- SMA (`bots/algo_sma.py`)
+- RSI (`bots/algo_rsi.py`)
+- EMA (`bots/algo_ema.py`)
+- Bollinger (`bots/algo_bollinger.py`)
+- MACD (`bots/algo_macd.py`)
+- Donchian (`bots/algo_donchian.py`)
+- ROC (`bots/algo_roc.py`)
+
+Logs are written to `logs/*.log`.
+
+### 5. Start bots manually (optional)
 
 Open extra terminals if you want the simulation to trade automatically.
 
@@ -104,6 +127,41 @@ source .venv/bin/activate
 python bots/algo_rsi.py
 ```
 
+#### EMA bot
+
+```bash
+source .venv/bin/activate
+python bots/algo_ema.py
+```
+
+#### Bollinger bot
+
+```bash
+source .venv/bin/activate
+python bots/algo_bollinger.py
+```
+
+#### MACD bot
+
+```bash
+source .venv/bin/activate
+python bots/algo_macd.py
+```
+
+#### Donchian bot
+
+```bash
+source .venv/bin/activate
+python bots/algo_donchian.py
+```
+
+#### ROC bot
+
+```bash
+source .venv/bin/activate
+python bots/algo_roc.py
+```
+
 The bots connect to `ws://localhost:8000/ws/market` and submit orders to `http://localhost:8000/api/orders`.
 
 ## Environment Variables
@@ -121,6 +179,11 @@ The bots connect to `ws://localhost:8000/ws/market` and submit orders to `http:/
 - `ALGO_RSI_SYMBOL` controls the RSI bot symbol.
 - `ALGO_RSI_ORDER_QTY` controls the RSI bot order size.
 - `ALGO_RSI_WINDOW` controls the RSI lookback window.
+- `ALGO_EMA_USER_ID`, `ALGO_EMA_SYMBOL`, `ALGO_EMA_ORDER_QTY`, `ALGO_EMA_FAST_WINDOW`, and `ALGO_EMA_SLOW_WINDOW` control EMA behavior.
+- `ALGO_BOLLINGER_USER_ID`, `ALGO_BOLLINGER_SYMBOL`, `ALGO_BOLLINGER_ORDER_QTY`, `ALGO_BOLLINGER_WINDOW`, and `ALGO_BOLLINGER_STD` control Bollinger behavior.
+- `ALGO_MACD_USER_ID`, `ALGO_MACD_SYMBOL`, `ALGO_MACD_ORDER_QTY`, `ALGO_MACD_FAST_WINDOW`, `ALGO_MACD_SLOW_WINDOW`, and `ALGO_MACD_SIGNAL_WINDOW` control MACD behavior.
+- `ALGO_DONCHIAN_USER_ID`, `ALGO_DONCHIAN_SYMBOL`, `ALGO_DONCHIAN_ORDER_QTY`, and `ALGO_DONCHIAN_WINDOW` control Donchian behavior.
+- `ALGO_ROC_USER_ID`, `ALGO_ROC_SYMBOL`, `ALGO_ROC_ORDER_QTY`, `ALGO_ROC_WINDOW`, `ALGO_ROC_BUY_THRESHOLD`, and `ALGO_ROC_SELL_THRESHOLD` control ROC behavior.
 
 ## System Architecture
 
@@ -151,11 +214,12 @@ This is intentionally a single-user educational platform for now.
 - PostgreSQL-backed order matching
 - Market and limit orders
 - Portfolio retrieval
-- Algorithm statistics for `algo-sma` and `algo-rsi`
+- Algorithm statistics for all live strategies (`algo-sma`, `algo-rsi`, `algo-ema`, `algo-bollinger`, `algo-macd`, `algo-donchian`, `algo-roc`)
 - Recent trades feed
 - Order book aggregation
 - Historical market charting
-- Market maker, SMA, and RSI bots
+- Market maker + SMA/RSI/EMA/Bollinger/MACD/Donchian/ROC bots
+- Global UTC clock in the header with current date and time
 - Dark trading and analytics dashboards
 
 ## Future Implementation Roadmap
