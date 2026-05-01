@@ -6,7 +6,8 @@ import { AlertTriangle, BarChart3, CandlestickChart, LayoutGrid, RefreshCw, Tren
 
 import { API_BASE, apiGet } from '@/lib/api';
 import type { MarketBar, MarketTick, OrderBook, Portfolio, RecentTrade } from '@/lib/types';
-import { Badge, Button, Panel, Select } from '@/components/ui';
+import { Badge, Button, Panel, Select, Tooltip } from '@/components/ui';
+import { getDefinition } from '@/lib/trading-glossary';
 
 const SYMBOLS = ['AAPL', 'MSFT', 'TSLA'];
 
@@ -240,8 +241,8 @@ export function TradingDashboard() {
 
         <div className="mt-5 grid gap-3 md:grid-cols-3">
           <Stat label="Last close" value={latestBar ? formatCurrency(latestBar.close) : '--'} delta={latestBar ? `${selectedSymbol} • ${latestBar.volume.toLocaleString()} vol` : 'Waiting for market tick'} />
-          <Stat label="Bid / Ask spread" value={spread != null ? formatCompact(spread) : '--'} delta={spread != null ? 'Live order book spread' : 'No book data yet'} />
-          <Stat label="Portfolio equity" value={portfolio ? formatCurrency(portfolio.equity) : '--'} delta={portfolio ? `Cash ${formatCurrency(portfolio.cash_balance)} • Positions ${formatCurrency(notional)}` : 'Loading account'} />
+          <Stat label="Bid / Ask spread" value={spread != null ? formatCompact(spread) : '--'} delta={spread != null ? 'Live order book spread' : 'No book data yet'} definition={getDefinition('spread')} />
+          <Stat label="Portfolio equity" value={portfolio ? formatCurrency(portfolio.equity) : '--'} delta={portfolio ? `Cash ${formatCurrency(portfolio.cash_balance)} • Positions ${formatCurrency(notional)}` : 'Loading account'} definition={getDefinition('portfolio')} />
         </div>
       </Panel>
 
@@ -272,7 +273,7 @@ export function TradingDashboard() {
             <div>
               <div className="flex items-center gap-2 text-xs uppercase tracking-[0.24em] text-zinc-500">
                 <LayoutGrid className="h-4 w-4 text-sky-300" />
-                Order book
+                <Tooltip definition={getDefinition('order-book')}>Order book</Tooltip>
               </div>
               <h2 className="mt-2 text-lg font-semibold text-white">Top of book</h2>
             </div>
@@ -280,8 +281,12 @@ export function TradingDashboard() {
           </div>
 
           <div className="grid grid-cols-2 gap-3 text-xs uppercase tracking-[0.16em] text-zinc-500">
-            <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 p-2 text-emerald-200">Bids</div>
-            <div className="rounded-xl border border-red-500/20 bg-red-500/10 p-2 text-red-200">Asks</div>
+            <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 p-2 text-emerald-200">
+              <Tooltip definition={getDefinition('bid')}>Bids</Tooltip>
+            </div>
+            <div className="rounded-xl border border-red-500/20 bg-red-500/10 p-2 text-red-200">
+              <Tooltip definition={getDefinition('ask')}>Asks</Tooltip>
+            </div>
           </div>
 
           <div className="mt-3 grid grid-cols-2 gap-3">
@@ -312,7 +317,7 @@ export function TradingDashboard() {
             <div>
               <div className="flex items-center gap-2 text-xs uppercase tracking-[0.24em] text-zinc-500">
                 <TrendingUp className="h-4 w-4 text-emerald-300" />
-                Liquidity
+                <Tooltip definition={getDefinition('liquidity')}>Liquidity</Tooltip>
               </div>
               <h2 className="mt-2 text-lg font-semibold text-white">Market depth snapshot</h2>
             </div>
@@ -338,10 +343,12 @@ export function TradingDashboard() {
   );
 }
 
-function Stat({ label, value, delta }: { label: string; value: string; delta: string }) {
+function Stat({ label, value, delta, definition }: { label: string; value: string; delta: string; definition?: string }) {
   return (
     <div className="rounded-2xl border border-white/10 bg-black/20 p-4 shadow-glow">
-      <div className="text-[11px] uppercase tracking-[0.24em] text-zinc-500">{label}</div>
+      <div className="text-[11px] uppercase tracking-[0.24em] text-zinc-500">
+        {definition ? <Tooltip definition={definition}>{label}</Tooltip> : label}
+      </div>
       <div className="mt-2 text-2xl font-semibold text-white">{value}</div>
       <div className="mt-1 text-xs text-zinc-400">{delta}</div>
     </div>

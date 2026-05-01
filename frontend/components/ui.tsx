@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import type { ButtonHTMLAttributes, HTMLAttributes, InputHTMLAttributes, PropsWithChildren, SelectHTMLAttributes } from 'react';
 
 function cn(...classes: Array<string | false | null | undefined>): string {
@@ -103,5 +104,32 @@ export function StatCard({
       <div className={cn('mt-2 text-2xl font-semibold tabular-nums tracking-tight', toneClass)}>{value}</div>
       {delta ? <div className="mt-1 text-xs leading-5 text-zinc-500">{delta}</div> : null}
     </Panel>
+  );
+}
+
+type TooltipProps = PropsWithChildren<{
+  definition: string;
+  className?: string;
+}>;
+
+export function Tooltip({ children, definition, className }: TooltipProps) {
+  const [showTooltip, setShowTooltip] = useState(false);
+
+  return (
+    <div className={cn('relative inline-block', className)}>
+      <div
+        onMouseEnter={() => setShowTooltip(true)}
+        onMouseLeave={() => setShowTooltip(false)}
+        className="cursor-help border-b border-dashed border-white/40 hover:border-emerald-400/60 transition"
+      >
+        {children}
+      </div>
+      {showTooltip && (
+        <div className="absolute bottom-full left-1/2 z-50 -translate-x-1/2 mb-2 px-3 py-2 bg-zinc-900 border border-white/20 rounded-lg text-xs text-zinc-200 whitespace-nowrap pointer-events-none shadow-lg">
+          {definition}
+          <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-zinc-900" />
+        </div>
+      )}
+    </div>
   );
 }

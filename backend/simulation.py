@@ -92,10 +92,17 @@ class MarketStreamer:
                 await asyncio.sleep(self.interval_seconds)
                 continue
 
+            if self._index >= len(self._snapshots):
+                self._running = False
+                return
+
             snapshot = self._snapshots[self._index]
             self.latest_snapshot = snapshot
             await self.broadcast(snapshot)
-            self._index = (self._index + 1) % len(self._snapshots)
+            self._index += 1
+            if self._index >= len(self._snapshots):
+                self._running = False
+                return
             await asyncio.sleep(self.interval_seconds)
 
     async def broadcast(self, payload: dict) -> None:

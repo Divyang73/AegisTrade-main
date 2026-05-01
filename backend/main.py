@@ -212,6 +212,27 @@ async def _seed_market_maker() -> None:
             )
 
 
+async def _seed_human_user() -> None:
+    pool = await get_pool()
+    async with pool.acquire() as conn:
+        await conn.execute(
+            """
+            INSERT INTO users (user_id, is_bot)
+            VALUES ('human-user', FALSE)
+            ON CONFLICT (user_id) DO UPDATE SET is_bot = EXCLUDED.is_bot
+            """
+        )
+        await conn.execute(
+            """
+            INSERT INTO wallets AS w (user_id, cash_balance)
+            VALUES ('human-user', $1)
+            ON CONFLICT (user_id) DO UPDATE
+            SET cash_balance = GREATEST(w.cash_balance, EXCLUDED.cash_balance)
+            """,
+            INITIAL_EQUITY,
+        )
+
+
 async def _seed_bots() -> None:
     """Initialize all 7 algorithm bots with initial capital."""
     pool = await get_pool()
@@ -249,6 +270,7 @@ async def _seed_bots() -> None:
 @app.on_event("startup")
 async def on_startup() -> None:
     pool = await init_pool()
+    await _seed_human_user()
     await _seed_market_maker()
     await _seed_bots()
     app.state.streamer = MarketStreamer(
@@ -347,21 +369,27 @@ async def _compute_algo_stats(conn, user_id: str) -> AlgoStatsResponse:
     if wallet is None:
         raise HTTPException(status_code=404, detail=f"{user_id} wallet not found")
 
-    latest_price = await conn.fetchval(
-        """
-        SELECT close
-        FROM historical_data
-        ORDER BY "timestamp" DESC
-        LIMIT 1
-        """
-    )
-    latest_price_float = _decimal_to_float(latest_price)
-
     positions = await conn.fetch(
-        "SELECT symbol, quantity FROM positions WHERE user_id = $1",
+        """
+        SELECT p.symbol, p.quantity, COALESCE(h.close, 0) AS last_price
+        FROM positions p
+        LEFT JOIN LATERAL (
+            SELECT close
+            FROM historical_data h
+            WHERE h.symbol = p.symbol
+            ORDER BY h."timestamp" DESC
+            LIMIT 1
+        ) h ON TRUE
+        WHERE p.user_id = $1
+        ORDER BY p.symbol ASC
+        """,
         user_id,
     )
-    mark_to_market = sum(int(row["quantity"]) * latest_price_float for row in positions)
+    mark_to_market = 0.0
+    for row in positions:
+        quantity = int(row["quantity"])
+        last_price = _decimal_to_float(row["last_price"])
+        mark_to_market += quantity * last_price
     equity = _decimal_to_float(wallet["cash_balance"]) + mark_to_market
     pnl = equity - 100000.0
 
