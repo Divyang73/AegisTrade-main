@@ -178,6 +178,156 @@ def _runtime_state_for_slug(slug: str, user_id: str) -> dict[str, Any]:
     return state
 
 
+async def _compute_strategy_financials(
+    conn,
+    user_id: str,
+) -> tuple[StrategyMetrics, list[PortfolioPosition], list[EquityPoint]]:
+    wallet = await conn.fetchrow(
+        "SELECT cash_balance FROM wallets WHERE user_id = $1",
+        user_id,
+    )
+    if wallet is None:
+        raise HTTPException(status_code=404, detail=f"{user_id} wallet not found")
+
+    positions_rows = await conn.fetch(
+        """
+        SELECT p.symbol, p.quantity, COALESCE(h.close, 0) AS last_price
+        FROM positions p
+        LEFT JOIN LATERAL (
+            SELECT close
+            FROM historical_data h
+            WHERE h.symbol = p.symbol
+            ORDER BY h."timestamp" DESC
+            LIMIT 1
+        ) h ON TRUE
+        WHERE p.user_id = $1
+        ORDER BY p.symbol ASC
+        """,
+        user_id,
+    )
+
+    current_positions: list[PortfolioPosition] = []
+    mark_to_market = 0.0
+    for row in positions_rows:
+        quantity = int(row["quantity"])
+        last_price = _decimal_to_float(row["last_price"])
+        market_value = quantity * last_price
+        mark_to_market += market_value
+        current_positions.append(
+            PortfolioPosition(
+                symbol=row["symbol"],
+                quantity=quantity,
+                last_price=last_price,
+                market_value=market_value,
+            )
+        )
+
+    wallet_cash = _decimal_to_float(wallet["cash_balance"])
+    equity = wallet_cash + mark_to_market
+
+    trade_rows = await conn.fetch(
+        """
+        SELECT id, symbol, price, quantity, buyer_id, seller_id, "timestamp"
+        FROM trades
+        WHERE buyer_id = $1 OR seller_id = $1
+        ORDER BY "timestamp" ASC
+        """,
+        user_id,
+    )
+
+    lots: dict[str, list[tuple[int, float]]] = defaultdict(list)
+    realized_pnl = 0.0
+    winning_closes = 0
+    closed_trades = 0
+    equity_curve: list[EquityPoint] = []
+    running_equity = INITIAL_EQUITY
+    total_trade_size = 0
+
+    for row in trade_rows:
+        quantity = int(row["quantity"])
+        price = _decimal_to_float(row["price"])
+        trade_symbol = row["symbol"]
+        total_trade_size += quantity
+
+        if row["buyer_id"] == user_id:
+            lots[trade_symbol].append((quantity, price))
+            continue
+
+        if row["seller_id"] != user_id:
+            continue
+
+        remaining = quantity
+        trade_realized = 0.0
+        symbol_lots = lots[trade_symbol]
+        while remaining > 0 and symbol_lots:
+            lot_qty, lot_price = symbol_lots[0]
+            matched = min(remaining, lot_qty)
+            trade_realized += (price - lot_price) * matched
+            lot_qty -= matched
+            remaining -= matched
+            if lot_qty == 0:
+                symbol_lots.pop(0)
+            else:
+                symbol_lots[0] = (lot_qty, lot_price)
+
+        if trade_realized != 0:
+            closed_trades += 1
+            if trade_realized > 0:
+                winning_closes += 1
+
+        realized_pnl += trade_realized
+        running_equity = INITIAL_EQUITY + realized_pnl
+        equity_curve.append(EquityPoint(timestamp=row["timestamp"].isoformat(), equity=running_equity))
+
+    last_price_by_symbol = {position.symbol: position.last_price for position in current_positions}
+    unrealized_pnl = 0.0
+    for trade_symbol, symbol_lots in lots.items():
+        last_price = last_price_by_symbol.get(trade_symbol, 0.0)
+        for lot_qty, lot_price in symbol_lots:
+            unrealized_pnl += (last_price - lot_price) * lot_qty
+
+    total_pnl = realized_pnl + unrealized_pnl
+    total_trades = len(trade_rows)
+    avg_trade_size = float(total_trade_size) / float(total_trades) if total_trades else 0.0
+    win_rate = float(winning_closes) / float(closed_trades) if closed_trades else 0.0
+
+    curve_values = [point.equity for point in equity_curve]
+    if not curve_values:
+        curve_values = [INITIAL_EQUITY, equity]
+    else:
+        equity_curve.append(
+            EquityPoint(
+                timestamp=datetime.now(timezone.utc).isoformat(),
+                equity=equity,
+            )
+        )
+        curve_values.append(equity)
+
+    returns: list[float] = []
+    for idx in range(1, len(curve_values)):
+        previous = curve_values[idx - 1]
+        current = curve_values[idx]
+        if previous != 0:
+            returns.append((current - previous) / previous)
+
+    sharpe_ratio = _compute_sharpe(returns)
+    drawdown = _compute_drawdown(curve_values)
+
+    metrics = StrategyMetrics(
+        realized_pnl=realized_pnl,
+        unrealized_pnl=unrealized_pnl,
+        total_pnl=total_pnl,
+        win_rate=win_rate,
+        sharpe_ratio=sharpe_ratio,
+        total_trades=total_trades,
+        avg_trade_size=avg_trade_size,
+        drawdown=drawdown,
+        cash_balance=wallet_cash,
+        equity=equity,
+    )
+    return metrics, current_positions, equity_curve
+
+
 async def _seed_market_maker() -> None:
     pool = await get_pool()
     async with pool.acquire() as conn:
@@ -362,65 +512,15 @@ async def get_portfolio(user_id: str) -> PortfolioResponse:
 
 
 async def _compute_algo_stats(conn, user_id: str) -> AlgoStatsResponse:
-    wallet = await conn.fetchrow(
-        "SELECT cash_balance FROM wallets WHERE user_id = $1",
-        user_id,
-    )
-    if wallet is None:
-        raise HTTPException(status_code=404, detail=f"{user_id} wallet not found")
-
-    positions = await conn.fetch(
-        """
-        SELECT p.symbol, p.quantity, COALESCE(h.close, 0) AS last_price
-        FROM positions p
-        LEFT JOIN LATERAL (
-            SELECT close
-            FROM historical_data h
-            WHERE h.symbol = p.symbol
-            ORDER BY h."timestamp" DESC
-            LIMIT 1
-        ) h ON TRUE
-        WHERE p.user_id = $1
-        ORDER BY p.symbol ASC
-        """,
-        user_id,
-    )
-    mark_to_market = 0.0
-    for row in positions:
-        quantity = int(row["quantity"])
-        last_price = _decimal_to_float(row["last_price"])
-        mark_to_market += quantity * last_price
-    equity = _decimal_to_float(wallet["cash_balance"]) + mark_to_market
-    pnl = equity - 100000.0
-
-    total_trades = await conn.fetchval(
-        """
-        SELECT COUNT(*)
-        FROM trades
-        WHERE buyer_id = $1 OR seller_id = $1
-        """,
-        user_id,
-    )
-
-    favorable_trades = await conn.fetchval(
-        """
-        SELECT COUNT(*)
-        FROM trades
-        WHERE (buyer_id = $1 AND price <= $2)
-           OR (seller_id = $1 AND price >= $2)
-        """,
-        user_id,
-        latest_price,
-    )
-    win_rate = float(favorable_trades or 0) / float(total_trades or 1)
+    metrics, _, _ = await _compute_strategy_financials(conn, user_id)
 
     return AlgoStatsResponse(
         user_id=user_id,
-        pnl=pnl,
-        win_rate=win_rate,
-        total_trades=int(total_trades or 0),
-        cash_balance=_decimal_to_float(wallet["cash_balance"]),
-        equity=equity,
+        pnl=metrics.total_pnl,
+        win_rate=metrics.win_rate,
+        total_trades=metrics.total_trades,
+        cash_balance=metrics.cash_balance,
+        equity=metrics.equity,
     )
 
 
@@ -704,53 +804,7 @@ async def _compute_strategy_detail(conn, slug: str) -> StrategyDetailResponse:
     live = bool(config["live"])
     state = _runtime_state_for_slug(slug, user_id)
 
-    wallet = await conn.fetchrow("SELECT cash_balance FROM wallets WHERE user_id = $1", user_id)
-    wallet_cash = _decimal_to_float(wallet["cash_balance"]) if wallet is not None else INITIAL_EQUITY
-
-    positions_rows = await conn.fetch(
-        """
-        SELECT p.symbol, p.quantity, COALESCE(h.close, 0) AS last_price
-        FROM positions p
-        LEFT JOIN LATERAL (
-            SELECT close
-            FROM historical_data h
-            WHERE h.symbol = p.symbol
-            ORDER BY h."timestamp" DESC
-            LIMIT 1
-        ) h ON TRUE
-        WHERE p.user_id = $1
-        ORDER BY p.symbol ASC
-        """,
-        user_id,
-    )
-
-    current_positions: list[PortfolioPosition] = []
-    mark_to_market = 0.0
-    for row in positions_rows:
-        quantity = int(row["quantity"])
-        last_price = _decimal_to_float(row["last_price"])
-        market_value = quantity * last_price
-        mark_to_market += market_value
-        current_positions.append(
-            PortfolioPosition(
-                symbol=row["symbol"],
-                quantity=quantity,
-                last_price=last_price,
-                market_value=market_value,
-            )
-        )
-
-    equity = wallet_cash + mark_to_market
-
-    trade_rows = await conn.fetch(
-        """
-        SELECT id, symbol, price, quantity, buyer_id, seller_id, "timestamp"
-        FROM trades
-        WHERE buyer_id = $1 OR seller_id = $1
-        ORDER BY "timestamp" ASC
-        """,
-        user_id,
-    )
+    metrics, current_positions, equity_curve = await _compute_strategy_financials(conn, user_id)
 
     live_trade_rows = await conn.fetch(
         """
@@ -791,84 +845,6 @@ async def _compute_strategy_detail(conn, slug: str) -> StrategyDetailResponse:
         for row in order_rows
     ]
 
-    lots: dict[str, list[tuple[int, float]]] = defaultdict(list)
-    realized_pnl = 0.0
-    winning_closes = 0
-    closed_trades = 0
-    equity_curve: list[EquityPoint] = []
-    running_equity = INITIAL_EQUITY
-    total_trade_size = 0
-
-    for row in trade_rows:
-        quantity = int(row["quantity"])
-        price = _decimal_to_float(row["price"])
-        trade_symbol = row["symbol"]
-        total_trade_size += quantity
-
-        if row["buyer_id"] == user_id:
-            lots[trade_symbol].append((quantity, price))
-            continue
-
-        if row["seller_id"] != user_id:
-            continue
-
-        remaining = quantity
-        trade_realized = 0.0
-        symbol_lots = lots[trade_symbol]
-        while remaining > 0 and symbol_lots:
-            lot_qty, lot_price = symbol_lots[0]
-            matched = min(remaining, lot_qty)
-            trade_realized += (price - lot_price) * matched
-            lot_qty -= matched
-            remaining -= matched
-            if lot_qty == 0:
-                symbol_lots.pop(0)
-            else:
-                symbol_lots[0] = (lot_qty, lot_price)
-
-        if trade_realized != 0:
-            closed_trades += 1
-            if trade_realized > 0:
-                winning_closes += 1
-
-        realized_pnl += trade_realized
-        running_equity = INITIAL_EQUITY + realized_pnl
-        equity_curve.append(EquityPoint(timestamp=row["timestamp"].isoformat(), equity=running_equity))
-
-    last_price_by_symbol = {position.symbol: position.last_price for position in current_positions}
-    unrealized_pnl = 0.0
-    for trade_symbol, symbol_lots in lots.items():
-        last_price = last_price_by_symbol.get(trade_symbol, 0.0)
-        for lot_qty, lot_price in symbol_lots:
-            unrealized_pnl += (last_price - lot_price) * lot_qty
-
-    total_pnl = realized_pnl + unrealized_pnl
-    total_trades = len(trade_rows)
-    avg_trade_size = float(total_trade_size) / float(total_trades) if total_trades else 0.0
-    win_rate = float(winning_closes) / float(closed_trades) if closed_trades else 0.0
-
-    curve_values = [point.equity for point in equity_curve]
-    if not curve_values:
-        curve_values = [INITIAL_EQUITY, equity]
-    else:
-        equity_curve.append(
-            EquityPoint(
-                timestamp=datetime.now(timezone.utc).isoformat(),
-                equity=equity,
-            )
-        )
-        curve_values.append(equity)
-
-    returns: list[float] = []
-    for idx in range(1, len(curve_values)):
-        previous = curve_values[idx - 1]
-        current = curve_values[idx]
-        if previous != 0:
-            returns.append((current - previous) / previous)
-
-    sharpe_ratio = _compute_sharpe(returns)
-    drawdown = _compute_drawdown(curve_values)
-
     market_history = await _fetch_history(conn, symbol, limit=220)
     overlays = _build_overlays(slug, market_history)
 
@@ -884,18 +860,7 @@ async def _compute_strategy_detail(conn, slug: str) -> StrategyDetailResponse:
         indicators=state.get("indicators"),
         reason=state.get("reason"),
         error=state.get("error"),
-        metrics=StrategyMetrics(
-            realized_pnl=realized_pnl,
-            unrealized_pnl=unrealized_pnl,
-            total_pnl=total_pnl,
-            win_rate=win_rate,
-            sharpe_ratio=sharpe_ratio,
-            total_trades=total_trades,
-            avg_trade_size=avg_trade_size,
-            drawdown=drawdown,
-            cash_balance=wallet_cash,
-            equity=equity,
-        ),
+        metrics=metrics,
         current_positions=current_positions,
         live_trades=live_trades,
         order_activity=order_activity,
