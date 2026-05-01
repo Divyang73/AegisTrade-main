@@ -40,13 +40,13 @@ export default function LearnDetailPage({ params }: { params: { slug: string } }
       <Panel className="p-6">
         <Link href="/learn" className="inline-flex items-center gap-2 text-xs uppercase tracking-[0.2em] text-zinc-400 hover:text-white">
           <ArrowLeft className="h-4 w-4" />
-          Back to lessons
+          back to lessons
         </Link>
         <div className="mt-4 flex flex-wrap items-center gap-3">
           <Badge>{content.difficulty}</Badge>
           <Badge className="border-sky-500/20 bg-sky-500/10 text-sky-200">
             <BookMarked className="mr-1.5 h-3.5 w-3.5" />
-            Strategy primer
+            strategy primer
           </Badge>
         </div>
         <h1 className="mt-4 text-3xl font-semibold tracking-tight text-white">{content.name}</h1>
@@ -54,19 +54,19 @@ export default function LearnDetailPage({ params }: { params: { slug: string } }
       </Panel>
 
       <div className="grid gap-4 md:grid-cols-2">
-        <Section title="Concept" body={content.concept} />
-        <Section title="Technical Logic" body={content.technical_logic} />
-        <Section title="Works Best When" body={content.works_when} />
-        <Section title="Fails When" body={content.fails_when} />
-        <Section title="Real-World Usage" body={content.real_world_usage} />
-        <Section title="Visual Diagram" body={content.visual_diagram} />
+        <Section title="concept" body={content.concept} />
+        <Section title="technical logic" body={content.technical_logic} />
+        <Section title="works best when" body={content.works_when} />
+        <Section title="fails when" body={content.fails_when} />
+        <Section title="real-world usage" body={content.real_world_usage} />
+        <Section title="visual diagram" body={content.visual_diagram} />
       </div>
 
-      <Section title="Step-by-Step Walkthrough" body={content.walkthrough} />
+      <Section title="step-by-step walkthrough" body={content.walkthrough} />
 
       <Panel className="p-5">
         <div className="text-xs uppercase tracking-[0.22em] text-zinc-500 flex items-center gap-2 mb-3">
-          📚 Key Terms
+          📚 key terms
         </div>
         <div className="flex flex-wrap gap-2">
           {getKeyTermsForStrategy(content.slug).map((term) => (
@@ -80,13 +80,13 @@ export default function LearnDetailPage({ params }: { params: { slug: string } }
       </Panel>
 
       <Panel className="p-5">
-        <div className="text-xs uppercase tracking-[0.22em] text-zinc-500">Next actions</div>
+        <div className="text-xs uppercase tracking-[0.22em] text-zinc-500">next actions</div>
         <div className="mt-3 flex flex-wrap gap-3">
           <Link href={`/algorithms/${content.slug}`} className="rounded-xl border border-white/10 bg-white/[0.06] px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/[0.12]">
-            Open live strategy page
+            open live strategy page
           </Link>
           <Link href="/trading" className="rounded-xl border border-white/10 bg-white/[0.06] px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/[0.12]">
-            Go to trading console
+            go to trading console
           </Link>
         </div>
       </Panel>
