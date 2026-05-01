@@ -66,9 +66,4 @@ npm run dev
 - Trading: `http://localhost:3000/trading`
 - Algorithms: `http://localhost:3000/algorithms`
 
-Notes for submission
-- This repository uses PostgreSQL as the authoritative persistent layer. The course brief mentioned a dual-layer approach; that architecture is not required to meet the core objectives and is intentionally omitted here to keep the system deterministic and easier to grade.
-- If you need a packaged demonstration (Docker compose, or a script that seeds and runs everything), tell me and I will add it.
 
-Contact and next steps
-- If you want me to revert any recent UI wording/casing changes or to remove additional files before submission, tell me which files to revert and I will apply a targeted patch.

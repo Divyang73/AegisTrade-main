@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createChart } from 'lightweight-charts';
-import { AlertTriangle, BarChart3, CandlestickChart, LayoutGrid, RefreshCw, TrendingDown, TrendingUp } from 'lucide-react';
+import { AlertTriangle, BarChart3, CandlestickChart, LayoutGrid, RefreshCw } from 'lucide-react';
 
 import { API_BASE, apiGet } from '@/lib/api';
 import type { MarketBar, MarketTick, OrderBook, Portfolio, RecentTrade } from '@/lib/types';
@@ -311,67 +311,7 @@ export function TradingDashboard() {
           </div>
         </Panel>
 
-        <Panel className="p-4">
-          <div className="mb-4 flex items-center justify-between">
-            <div>
-              <div className="flex items-center gap-2 text-xs uppercase tracking-[0.24em] text-zinc-500">
-                <TrendingUp className="h-4 w-4 text-emerald-300" />
-                liquidity
-                
-              </div>
-              <h2 className="mt-2 text-lg font-semibold text-white">market depth snapshot</h2>
-            </div>
-            <Badge>{selectedSymbol}</Badge>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3 text-xs text-zinc-400">
-            <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-3">
-              <div className="flex items-center gap-2">
-                <TrendingUp className="h-4 w-4 text-emerald-300" />
-                <span>buy-side liquidity</span>
-                
-              </div>
-              <div className="mt-2 text-white">{orderBook?.bids.length ?? 0} levels</div>
-            </div>
-            <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-3">
-              <div className="flex items-center gap-2">
-                <TrendingDown className="h-4 w-4 text-red-300" />
-                <span>sell-side liquidity</span>
-                
-              </div>
-              <div className="mt-2 text-white">{orderBook?.asks.length ?? 0} levels</div>
-            </div>
-          </div>
-
-          <div className="mt-4 grid grid-cols-3 gap-3 text-xs text-zinc-400">
-            <div className="rounded-2xl border border-white/10 bg-black/20 p-3">
-              <div className="flex items-center gap-2">
-                <span>best spread</span>
-              </div>
-              <div className="mt-2 text-white">{spread != null ? formatCompact(spread) : '—'}</div>
-            </div>
-            <div className="rounded-2xl border border-white/10 bg-black/20 p-3">
-              <div className="flex items-center gap-2">
-                <span>total bid depth</span>
-              </div>
-              <div className="mt-2 text-white">{bidDepth ? formatCompact(bidDepth) : '0'}</div>
-            </div>
-            <div className="rounded-2xl border border-white/10 bg-black/20 p-3">
-              <div className="flex items-center gap-2">
-                <span>total ask depth</span>
-              </div>
-              <div className="mt-2 text-white">{askDepth ? formatCompact(askDepth) : '0'}</div>
-            </div>
-          </div>
-
-          <div className="mt-4 rounded-2xl border border-white/10 bg-white/[0.03] p-3 text-xs text-zinc-400">
-            <div className="flex items-center gap-2">
-              <span>depth imbalance</span>
-            </div>
-            <div className="mt-2 text-white">{depthImbalance != null ? `${formatCompact(depthImbalance)}%` : '--'}</div>
-            <div className="mt-3 text-sm text-zinc-400">Market depth details appear when order book data is available.</div>
-          </div>
-        </Panel>
+        {/* Market depth snapshot removed per submission requirements */}
       </div>
 
     </div>

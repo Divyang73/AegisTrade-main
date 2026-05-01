@@ -151,27 +151,15 @@ export function AlgorithmDashboard() {
             </colgroup>
             <thead className="bg-white/[0.03] text-left text-xs uppercase tracking-[0.2em] text-zinc-500">
               <tr>
-                <th className="px-4 py-3 whitespace-nowrap">Algorithm</th>
-                <th className="px-4 py-3 whitespace-nowrap">Status</th>
-                <th className="px-4 py-3 whitespace-nowrap">
-                  PnL
-                </th>
-                <th className="px-4 py-3 whitespace-nowrap">
-                  Win Rate
-                </th>
-                <th className="px-4 py-3 whitespace-nowrap">
-                  Sharpe
-                </th>
-                <th className="px-4 py-3 whitespace-nowrap">
-                  Drawdown
-                </th>
-                <th className="px-4 py-3 whitespace-nowrap">
-                  Trades
-                </th>
-                <th className="px-4 py-3 whitespace-nowrap">
-                  Avg Trade
-                </th>
-                <th className="px-4 py-3 whitespace-nowrap">Link</th>
+                <th className="px-4 py-3 text-left align-middle whitespace-nowrap">Algorithm</th>
+                <th className="px-4 py-3 text-left align-middle whitespace-nowrap">Status</th>
+                <th className="px-4 py-3 text-left align-middle whitespace-nowrap">PnL</th>
+                <th className="px-4 py-3 text-left align-middle whitespace-nowrap">Win Rate</th>
+                <th className="px-4 py-3 text-left align-middle whitespace-nowrap">Sharpe</th>
+                <th className="px-4 py-3 text-left align-middle whitespace-nowrap">Drawdown</th>
+                <th className="px-4 py-3 text-left align-middle whitespace-nowrap">Trades</th>
+                <th className="px-4 py-3 text-left align-middle whitespace-nowrap">Avg Trade</th>
+                <th className="px-4 py-3 text-left align-middle whitespace-nowrap">Link</th>
               </tr>
             </thead>
             <tbody>
