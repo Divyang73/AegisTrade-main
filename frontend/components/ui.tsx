@@ -125,7 +125,7 @@ export function Tooltip({ children, definition, className }: TooltipProps) {
         {children}
       </div>
       {showTooltip && (
-        <div className="absolute bottom-full left-1/2 z-50 -translate-x-1/2 mb-2 px-3 py-2 bg-zinc-900 border border-white/20 rounded-lg text-xs text-zinc-200 whitespace-nowrap pointer-events-none shadow-lg">
+        <div className="absolute bottom-full left-1/2 z-50 mb-2 w-[18rem] max-w-[min(18rem,calc(100vw-1.5rem))] -translate-x-1/2 rounded-lg border border-white/20 bg-zinc-900 px-3 py-2 text-left text-xs leading-5 text-zinc-200 whitespace-normal break-words pointer-events-none shadow-lg">
           {definition}
           <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-zinc-900" />
         </div>

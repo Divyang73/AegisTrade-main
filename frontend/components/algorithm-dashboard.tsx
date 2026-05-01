@@ -137,31 +137,42 @@ export function AlgorithmDashboard() {
           </Link>
         </div>
 
-        <div className="overflow-hidden rounded-2xl border border-white/10">
-          <table className="w-full text-sm">
+        <div className="overflow-x-auto rounded-2xl border border-white/10">
+          <table className="min-w-[1100px] w-full table-fixed text-sm">
+            <colgroup>
+              <col className="w-[24%]" />
+              <col className="w-[12%]" />
+              <col className="w-[11%]" />
+              <col className="w-[11%]" />
+              <col className="w-[11%]" />
+              <col className="w-[11%]" />
+              <col className="w-[10%]" />
+              <col className="w-[10%]" />
+              <col className="w-[10%]" />
+            </colgroup>
             <thead className="bg-white/[0.03] text-left text-xs uppercase tracking-[0.2em] text-zinc-500">
               <tr>
-                <th className="px-4 py-3">Algorithm</th>
-                <th className="px-4 py-3">Status</th>
-                <th className="px-4 py-3">
+                <th className="px-4 py-3 whitespace-nowrap">Algorithm</th>
+                <th className="px-4 py-3 whitespace-nowrap">Status</th>
+                <th className="px-4 py-3 whitespace-nowrap">
                   <Tooltip definition={getDefinition('pnl')}>PnL</Tooltip>
                 </th>
-                <th className="px-4 py-3">
+                <th className="px-4 py-3 whitespace-nowrap">
                   <Tooltip definition={getDefinition('win-rate')}>Win Rate</Tooltip>
                 </th>
-                <th className="px-4 py-3">
+                <th className="px-4 py-3 whitespace-nowrap">
                   <Tooltip definition={getDefinition('sharpe')}>Sharpe</Tooltip>
                 </th>
-                <th className="px-4 py-3">
+                <th className="px-4 py-3 whitespace-nowrap">
                   <Tooltip definition={getDefinition('drawdown')}>Drawdown</Tooltip>
                 </th>
-                <th className="px-4 py-3">
+                <th className="px-4 py-3 whitespace-nowrap">
                   <Tooltip definition={getDefinition('win-loss-ratio')}>Trades</Tooltip>
                 </th>
-                <th className="px-4 py-3">
+                <th className="px-4 py-3 whitespace-nowrap">
                   <Tooltip definition={getDefinition('avg-trade')}>Avg Trade</Tooltip>
                 </th>
-                <th className="px-4 py-3">Link</th>
+                <th className="px-4 py-3 whitespace-nowrap">Link</th>
               </tr>
             </thead>
             <tbody>
