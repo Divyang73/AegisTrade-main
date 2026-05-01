@@ -56,6 +56,44 @@ export type RecentTrade = {
   buyer_id: string;
   seller_id: string;
   timestamp: string;
+  strategy?: string | null;
+  strategy_label?: string | null;
+  decision?: string | null;
+  reason?: string | null;
+};
+
+export type SystemTime = {
+  systemTime: string;
+  databaseTime: string | null;
+  streamTime: string | null;
+};
+
+export type StrategyEvent = {
+  type: string;
+  timestamp: string;
+  payload: Record<string, unknown>;
+};
+
+export type StrategySignal = Record<string, unknown> | null;
+
+export type StrategyRuntime = {
+  strategy: string;
+  user_id: string;
+  status: string;
+  last_run: string | null;
+  last_signal: StrategySignal;
+  latest_input: Record<string, unknown> | null;
+  indicators: Record<string, unknown> | null;
+  reason: string | null;
+  error: string | null;
+  last_trade: RecentTrade | null;
+  trade_count: number;
+  recent_events: StrategyEvent[];
+};
+
+export type StrategyStatus = StrategyRuntime & {
+  symbol: string;
+  live: boolean;
 };
 
 export type EquityPoint = {
@@ -104,6 +142,13 @@ export type StrategyDetail = {
   user_id: string;
   symbol: string;
   live: boolean;
+  status: string;
+  last_run: string | null;
+  last_signal: StrategySignal;
+  latest_input: Record<string, unknown> | null;
+  indicators: Record<string, unknown> | null;
+  reason: string | null;
+  error: string | null;
   metrics: StrategyMetrics;
   current_positions: Position[];
   live_trades: RecentTrade[];
@@ -111,6 +156,7 @@ export type StrategyDetail = {
   equity_curve: EquityPoint[];
   market_history: MarketBar[];
   overlays: IndicatorSeries[];
+  recent_events: StrategyEvent[];
 };
 
 export type StrategySummary = {

@@ -9,6 +9,8 @@ from typing import Any
 import requests
 import websockets
 
+from strategy_telemetry import StrategyTelemetryClient
+
 
 API_URL = os.getenv("API_URL", "http://localhost:8000")
 WS_URL = os.getenv("WS_URL", "ws://localhost:8000/ws/market")
@@ -16,6 +18,10 @@ USER_ID = os.getenv("ALGO_RSI_USER_ID", "algo-rsi")
 SYMBOL = os.getenv("ALGO_RSI_SYMBOL", "AAPL")
 ORDER_QTY = int(os.getenv("ALGO_RSI_ORDER_QTY", "10"))
 WINDOW = int(os.getenv("ALGO_RSI_WINDOW", "14"))
+STRATEGY_NAME = "RSI"
+STRATEGY_SLUG = "rsi"
+
+telemetry = StrategyTelemetryClient(STRATEGY_NAME, STRATEGY_SLUG, USER_ID)
 
 
 def _submit_order(side: str) -> None:
@@ -65,6 +71,7 @@ def _rsi(values: deque[float]) -> float | None:
 
 
 async def run() -> None:
+    telemetry.init()
     closes: deque[float] = deque(maxlen=WINDOW + 1)
     previous_rsi: float | None = None
 
@@ -80,20 +87,64 @@ async def run() -> None:
                         if bar.get("symbol") != SYMBOL:
                             continue
 
+                        timestamp = str(bar.get("timestamp") or payload.get("timestamp") or "")
+                        telemetry.run(timestamp)
                         closes.append(float(bar["close"]))
                         current_rsi = _rsi(closes)
                         if current_rsi is None:
+                            telemetry.no_data("Waiting for RSI warmup window", timestamp)
                             continue
+
+                        indicators = {"rsi": current_rsi, "window": WINDOW, "closes": list(closes)}
 
                         if previous_rsi is not None:
                             if previous_rsi <= 30.0 and current_rsi > 30.0:
+                                signal_payload = telemetry.signal(
+                                    price=float(bar["close"]),
+                                    indicators=indicators,
+                                    decision="BUY",
+                                    reason="RSI crossed above oversold threshold",
+                                    timestamp=timestamp,
+                                    input_data={"price": float(bar["close"]), "close_history": list(closes)},
+                                )
+                                telemetry.trade_attempt(signal_payload, timestamp)
                                 _submit_order("buy")
+                                telemetry.trade_success(timestamp=timestamp)
                             elif previous_rsi >= 70.0 and current_rsi < 70.0 and _has_inventory():
+                                signal_payload = telemetry.signal(
+                                    price=float(bar["close"]),
+                                    indicators=indicators,
+                                    decision="SELL",
+                                    reason="RSI crossed below overbought threshold",
+                                    timestamp=timestamp,
+                                    input_data={"price": float(bar["close"]), "close_history": list(closes)},
+                                )
+                                telemetry.trade_attempt(signal_payload, timestamp)
                                 _submit_order("sell")
+                                telemetry.trade_success(timestamp=timestamp)
+                            else:
+                                telemetry.signal(
+                                    price=float(bar["close"]),
+                                    indicators=indicators,
+                                    decision="NO TRADE",
+                                    reason="RSI stayed inside thresholds",
+                                    timestamp=timestamp,
+                                    input_data={"price": float(bar["close"]), "close_history": list(closes)},
+                                )
+                        else:
+                            telemetry.signal(
+                                price=float(bar["close"]),
+                                indicators=indicators,
+                                decision="NO TRADE",
+                                reason="Waiting for prior RSI value",
+                                timestamp=timestamp,
+                                input_data={"price": float(bar["close"]), "close_history": list(closes)},
+                            )
 
                         previous_rsi = current_rsi
 
         except Exception as exc:
+            telemetry.crash(exc)
             print(f"[algo-rsi] reconnecting after error: {exc}")
             await asyncio.sleep(2)
 

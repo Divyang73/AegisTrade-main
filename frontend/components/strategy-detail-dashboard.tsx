@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createChart, type UTCTimestamp } from 'lightweight-charts';
-import { BookOpen, ChartCandlestick, Clock3, RefreshCw, Scale, Wallet } from 'lucide-react';
+import { AlertTriangle, BookOpen, ChartCandlestick, Clock3, RefreshCw, Scale, Wallet } from 'lucide-react';
 
 import { apiGet } from '@/lib/api';
 import { getStrategyContent, type StrategyContent } from '@/lib/strategy-content';
@@ -218,6 +218,56 @@ export function StrategyDetailDashboard({ slug }: { slug: string }) {
           </div>
         </Panel>
       </div>
+
+      <Panel className="p-4">
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <div>
+            <div className="flex items-center gap-2 text-xs uppercase tracking-[0.24em] text-zinc-500">
+              <AlertTriangle className="h-4 w-4 text-amber-300" />
+              Strategy debug view
+            </div>
+            <h2 className="mt-2 text-lg font-semibold text-white">Latest input data, indicators, signal decision, and reason for no trade</h2>
+          </div>
+          <Badge>{detail?.status ?? 'not_running'}</Badge>
+        </div>
+
+        <div className="grid gap-3 xl:grid-cols-2">
+          <div className="rounded-2xl border border-white/10 bg-black/30 p-4">
+            <div className="text-xs uppercase tracking-[0.2em] text-zinc-500">Latest input</div>
+            <pre className="mt-3 overflow-auto text-xs leading-6 text-zinc-200">{JSON.stringify(detail?.latest_input ?? {}, null, 2)}</pre>
+          </div>
+          <div className="rounded-2xl border border-white/10 bg-black/30 p-4">
+            <div className="text-xs uppercase tracking-[0.2em] text-zinc-500">Indicators</div>
+            <pre className="mt-3 overflow-auto text-xs leading-6 text-zinc-200">{JSON.stringify(detail?.indicators ?? {}, null, 2)}</pre>
+          </div>
+          <div className="rounded-2xl border border-white/10 bg-black/30 p-4">
+            <div className="text-xs uppercase tracking-[0.2em] text-zinc-500">Last signal</div>
+            <pre className="mt-3 overflow-auto text-xs leading-6 text-zinc-200">{JSON.stringify(detail?.last_signal ?? {}, null, 2)}</pre>
+          </div>
+          <div className="rounded-2xl border border-white/10 bg-black/30 p-4">
+            <div className="text-xs uppercase tracking-[0.2em] text-zinc-500">Reason for no trade</div>
+            <p className="mt-3 text-sm leading-6 text-zinc-200">{detail?.reason ?? 'The strategy has not emitted a no-trade reason yet.'}</p>
+            {detail?.error ? <div className="mt-3 rounded-xl border border-red-500/20 bg-red-500/10 p-3 text-sm text-red-100">{detail.error}</div> : null}
+          </div>
+        </div>
+
+        {detail?.recent_events?.length ? (
+          <div className="mt-4 rounded-2xl border border-white/10 bg-black/30 p-4">
+            <div className="text-xs uppercase tracking-[0.2em] text-zinc-500">Recent events</div>
+            <div className="mt-3 max-h-[260px] space-y-2 overflow-auto pr-1">
+              {detail.recent_events.map((event) => (
+                <div key={`${event.type}-${event.timestamp}`} className="rounded-xl border border-white/8 bg-white/[0.04] p-3 text-xs text-zinc-300">
+                  <div className="flex items-center justify-between gap-3 text-[10px] uppercase tracking-[0.14em] text-zinc-500">
+                    <span>{event.type}</span>
+                    <span>{new Date(event.timestamp).toLocaleTimeString()}</span>
+                  </div>
+                  <pre className="mt-2 overflow-auto text-[11px] leading-5 text-zinc-200">{JSON.stringify(event.payload, null, 2)}</pre>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : null}
+      </Panel>
 
       <div className="grid gap-6 xl:grid-cols-3">
         <Panel className="p-4">

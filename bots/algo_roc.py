@@ -9,6 +9,8 @@ from typing import Any
 import requests
 import websockets
 
+from strategy_telemetry import StrategyTelemetryClient
+
 
 API_URL = os.getenv("API_URL", "http://localhost:8000")
 WS_URL = os.getenv("WS_URL", "ws://localhost:8000/ws/market")
@@ -18,6 +20,10 @@ ORDER_QTY = int(os.getenv("ALGO_ROC_ORDER_QTY", "10"))
 WINDOW = int(os.getenv("ALGO_ROC_WINDOW", "12"))
 BUY_THRESHOLD = float(os.getenv("ALGO_ROC_BUY_THRESHOLD", "0.5"))
 SELL_THRESHOLD = float(os.getenv("ALGO_ROC_SELL_THRESHOLD", "-0.5"))
+STRATEGY_NAME = "ROC"
+STRATEGY_SLUG = "roc-momentum"
+
+telemetry = StrategyTelemetryClient(STRATEGY_NAME, STRATEGY_SLUG, USER_ID)
 
 
 def _submit_order(side: str) -> None:
@@ -56,6 +62,7 @@ def _roc(values: deque[float]) -> float | None:
 
 
 async def run() -> None:
+    telemetry.init()
     closes: deque[float] = deque(maxlen=WINDOW + 1)
     previous_roc: float | None = None
 
@@ -71,23 +78,67 @@ async def run() -> None:
                         if bar.get("symbol") != SYMBOL:
                             continue
 
+                        timestamp = str(bar.get("timestamp") or payload.get("timestamp") or "")
+                        telemetry.run(timestamp)
                         closes.append(float(bar["close"]))
                         current_roc = _roc(closes)
                         if current_roc is None:
+                            telemetry.no_data("Waiting for ROC window to warm up", timestamp)
                             continue
+
+                        indicators = {"roc": current_roc, "window": WINDOW, "buy_threshold": BUY_THRESHOLD, "sell_threshold": SELL_THRESHOLD}
 
                         if previous_roc is not None:
                             crossed_up = previous_roc <= BUY_THRESHOLD and current_roc > BUY_THRESHOLD
                             crossed_down = previous_roc >= SELL_THRESHOLD and current_roc < SELL_THRESHOLD
 
                             if crossed_up:
+                                signal_payload = telemetry.signal(
+                                    price=float(bar["close"]),
+                                    indicators=indicators,
+                                    decision="BUY",
+                                    reason="ROC crossed above the buy threshold",
+                                    timestamp=timestamp,
+                                    input_data={"price": float(bar["close"]), "close_history": list(closes)},
+                                )
+                                telemetry.trade_attempt(signal_payload, timestamp)
                                 _submit_order("buy")
+                                telemetry.trade_success(timestamp=timestamp)
                             elif crossed_down and _has_inventory():
+                                signal_payload = telemetry.signal(
+                                    price=float(bar["close"]),
+                                    indicators=indicators,
+                                    decision="SELL",
+                                    reason="ROC crossed below the sell threshold",
+                                    timestamp=timestamp,
+                                    input_data={"price": float(bar["close"]), "close_history": list(closes)},
+                                )
+                                telemetry.trade_attempt(signal_payload, timestamp)
                                 _submit_order("sell")
+                                telemetry.trade_success(timestamp=timestamp)
+                            else:
+                                telemetry.signal(
+                                    price=float(bar["close"]),
+                                    indicators=indicators,
+                                    decision="NO TRADE",
+                                    reason="ROC remained inside thresholds",
+                                    timestamp=timestamp,
+                                    input_data={"price": float(bar["close"]), "close_history": list(closes)},
+                                )
+                        else:
+                            telemetry.signal(
+                                price=float(bar["close"]),
+                                indicators=indicators,
+                                decision="NO TRADE",
+                                reason="Waiting for prior ROC value",
+                                timestamp=timestamp,
+                                input_data={"price": float(bar["close"]), "close_history": list(closes)},
+                            )
 
                         previous_roc = current_roc
 
         except Exception as exc:
+            telemetry.crash(exc)
             print(f"[algo-roc] reconnecting after error: {exc}")
             await asyncio.sleep(2)
 

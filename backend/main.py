@@ -6,12 +6,14 @@ from datetime import datetime, timezone
 from time import perf_counter
 from decimal import Decimal
 from math import sqrt
+from typing import Any
 
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect, Request
 from fastapi.middleware.cors import CORSMiddleware
 
 from .config import settings
 from .db import close_pool, get_pool, init_pool
+from .strategy_runtime import strategy_runtime_store
 from .schemas import (
     AlgoStatsResponse,
     HistoricalBar,
@@ -24,8 +26,11 @@ from .schemas import (
     EquityPoint,
     PortfolioPosition,
     PortfolioResponse,
+    StrategyEventRequest,
     StrategyDetailResponse,
     StrategyMetrics,
+    StrategyStatusEntry,
+    SystemTimeResponse,
     TradeFeedEntry,
 )
 from .simulation import MarketStreamer
@@ -72,9 +77,104 @@ STRATEGY_REGISTRY: dict[str, dict[str, str | bool]] = {
     "pairs-trading": {"user_id": "algo-pairs", "symbol": "AAPL", "live": False},
 }
 
+USER_ID_TO_STRATEGY = {
+    str(config["user_id"]): slug for slug, config in STRATEGY_REGISTRY.items()
+}
+
 
 def _decimal_to_float(value: Decimal | None) -> float:
     return float(value or Decimal("0"))
+
+
+def _strategy_label(slug: str) -> str:
+    return slug.replace("-", " ").title()
+
+
+def _strategy_slug_for_user(user_id: str) -> str | None:
+    return USER_ID_TO_STRATEGY.get(user_id)
+
+
+def _trade_signal_context(row: dict[str, Any]) -> tuple[str | None, str | None, str | None]:
+    candidate_user_ids = [str(row["buyer_id"]), str(row["seller_id"])]
+    for user_id in candidate_user_ids:
+        slug = _strategy_slug_for_user(user_id)
+        if slug is None:
+            continue
+        state = strategy_runtime_store.snapshot(slug)
+        if state is None:
+            return slug, _strategy_label(slug), None
+
+        last_signal = state.get("last_signal") or {}
+        decision = None
+        reason = None
+        if isinstance(last_signal, dict):
+            decision = last_signal.get("decision") or state.get("status")
+            reason = last_signal.get("reason") or state.get("reason")
+        return slug, _strategy_label(slug), reason if decision else state.get("reason")
+    return None, None, None
+
+
+def _trade_feed_entry(row: Any) -> TradeFeedEntry:
+    strategy, strategy_label, reason = _trade_signal_context(row)
+    state = strategy_runtime_store.snapshot(strategy) if strategy is not None else None
+    decision = None
+    if isinstance(state, dict):
+        last_signal = state.get("last_signal") or {}
+        if isinstance(last_signal, dict):
+            decision = last_signal.get("decision")
+
+    return TradeFeedEntry(
+        id=str(row["id"]),
+        symbol=row["symbol"],
+        price=_decimal_to_float(row["price"]),
+        quantity=int(row["quantity"]),
+        buyer_id=row["buyer_id"],
+        seller_id=row["seller_id"],
+        timestamp=row["timestamp"].isoformat(),
+        strategy=strategy,
+        strategy_label=strategy_label,
+        decision=str(decision) if decision is not None else None,
+        reason=reason,
+    )
+
+
+async def _latest_database_time() -> str | None:
+    pool = await get_pool()
+    async with pool.acquire() as conn:
+        value = await conn.fetchval('SELECT MAX("timestamp") FROM historical_data')
+    return value.isoformat() if value is not None else None
+
+
+async def _latest_trade_count(conn, user_id: str) -> int:
+    value = await conn.fetchval(
+        """
+        SELECT COUNT(*)
+        FROM trades
+        WHERE buyer_id = $1 OR seller_id = $1
+        """,
+        user_id,
+    )
+    return int(value or 0)
+
+
+async def _latest_trade_row(conn, user_id: str) -> Any | None:
+    return await conn.fetchrow(
+        """
+        SELECT id, symbol, price, quantity, buyer_id, seller_id, "timestamp"
+        FROM trades
+        WHERE buyer_id = $1 OR seller_id = $1
+        ORDER BY "timestamp" DESC
+        LIMIT 1
+        """,
+        user_id,
+    )
+
+
+def _runtime_state_for_slug(slug: str, user_id: str) -> dict[str, Any]:
+    state = strategy_runtime_store.snapshot(slug)
+    if state is None:
+        state = strategy_runtime_store.ensure(slug, user_id).to_dict()
+    return state
 
 
 async def _seed_market_maker() -> None:
@@ -573,6 +673,7 @@ async def _compute_strategy_detail(conn, slug: str) -> StrategyDetailResponse:
     user_id = str(config["user_id"])
     symbol = str(config["symbol"])
     live = bool(config["live"])
+    state = _runtime_state_for_slug(slug, user_id)
 
     wallet = await conn.fetchrow("SELECT cash_balance FROM wallets WHERE user_id = $1", user_id)
     wallet_cash = _decimal_to_float(wallet["cash_balance"]) if wallet is not None else INITIAL_EQUITY
@@ -633,18 +734,7 @@ async def _compute_strategy_detail(conn, slug: str) -> StrategyDetailResponse:
         user_id,
     )
 
-    live_trades = [
-        TradeFeedEntry(
-            id=str(row["id"]),
-            symbol=row["symbol"],
-            price=_decimal_to_float(row["price"]),
-            quantity=int(row["quantity"]),
-            buyer_id=row["buyer_id"],
-            seller_id=row["seller_id"],
-            timestamp=row["timestamp"].isoformat(),
-        )
-        for row in live_trade_rows
-    ]
+    live_trades = [_trade_feed_entry(row) for row in live_trade_rows]
 
     order_rows = await conn.fetch(
         """
@@ -758,6 +848,13 @@ async def _compute_strategy_detail(conn, slug: str) -> StrategyDetailResponse:
         user_id=user_id,
         symbol=symbol,
         live=live,
+        status=str(state.get("status") or "not_running"),
+        last_run=state.get("last_run"),
+        last_signal=state.get("last_signal"),
+        latest_input=state.get("latest_input"),
+        indicators=state.get("indicators"),
+        reason=state.get("reason"),
+        error=state.get("error"),
         metrics=StrategyMetrics(
             realized_pnl=realized_pnl,
             unrealized_pnl=unrealized_pnl,
@@ -776,6 +873,7 @@ async def _compute_strategy_detail(conn, slug: str) -> StrategyDetailResponse:
         equity_curve=equity_curve,
         market_history=market_history,
         overlays=overlays,
+        recent_events=state.get("recent_events", []),
     )
 
 
@@ -815,6 +913,62 @@ async def get_algorithm_detail(slug: str) -> StrategyDetailResponse:
         return await _compute_strategy_detail(conn, slug)
 
 
+@app.get("/api/system-time", response_model=SystemTimeResponse)
+async def system_time() -> SystemTimeResponse:
+    system_now = datetime.now(timezone.utc).isoformat()
+    database_time = await _latest_database_time()
+    streamer = getattr(app.state, "streamer", None)
+    stream_time = None
+    if streamer is not None and getattr(streamer, "latest_snapshot", None) is not None:
+        stream_time = streamer.latest_snapshot.get("timestamp")
+
+    return SystemTimeResponse(systemTime=system_now, databaseTime=database_time, streamTime=stream_time)
+
+
+@app.post("/api/strategy-events")
+async def strategy_events(payload: StrategyEventRequest) -> dict[str, str]:
+    strategy_runtime_store.record_event(
+        strategy=payload.strategy,
+        user_id=payload.user_id,
+        event_type=payload.event_type,
+        payload=payload.payload,
+        timestamp=payload.timestamp,
+    )
+    return {"status": "accepted"}
+
+
+@app.get("/api/strategy-status", response_model=list[StrategyStatusEntry])
+async def strategy_status() -> list[StrategyStatusEntry]:
+    pool = await get_pool()
+    async with pool.acquire() as conn:
+        output: list[StrategyStatusEntry] = []
+        for slug, config in STRATEGY_REGISTRY.items():
+            user_id = str(config["user_id"])
+            state = _runtime_state_for_slug(slug, user_id)
+            trade_count = await _latest_trade_count(conn, user_id)
+            last_trade_row = await _latest_trade_row(conn, user_id)
+            last_trade = _trade_feed_entry(last_trade_row) if last_trade_row is not None else None
+            output.append(
+                StrategyStatusEntry(
+                    strategy=slug,
+                    user_id=user_id,
+                    symbol=str(config["symbol"]),
+                    live=bool(config["live"]),
+                    status=str(state.get("status") or "not_running"),
+                    last_run=state.get("last_run"),
+                    last_signal=state.get("last_signal"),
+                    latest_input=state.get("latest_input"),
+                    indicators=state.get("indicators"),
+                    reason=state.get("reason"),
+                    error=state.get("error"),
+                    last_trade=last_trade,
+                    trade_count=trade_count,
+                    recent_events=state.get("recent_events", []),
+                )
+            )
+    return output
+
+
 @app.get("/api/trades/recent", response_model=list[TradeFeedEntry])
 async def recent_trades(limit: int = 25) -> list[TradeFeedEntry]:
     pool = await get_pool()
@@ -829,18 +983,7 @@ async def recent_trades(limit: int = 25) -> list[TradeFeedEntry]:
             limit,
         )
 
-    return [
-        TradeFeedEntry(
-            id=str(row["id"]),
-            symbol=row["symbol"],
-            price=_decimal_to_float(row["price"]),
-            quantity=int(row["quantity"]),
-            buyer_id=row["buyer_id"],
-            seller_id=row["seller_id"],
-            timestamp=row["timestamp"].isoformat(),
-        )
-        for row in rows
-    ]
+    return [_trade_feed_entry(row) for row in rows]
 
 
 @app.get("/api/orderbook/{symbol}", response_model=OrderBookResponse)

@@ -10,6 +10,8 @@ from typing import Any
 import requests
 import websockets
 
+from strategy_telemetry import StrategyTelemetryClient
+
 
 API_URL = os.getenv("API_URL", "http://localhost:8000")
 WS_URL = os.getenv("WS_URL", "ws://localhost:8000/ws/market")
@@ -18,6 +20,10 @@ SYMBOL = os.getenv("ALGO_BOLLINGER_SYMBOL", "AAPL")
 ORDER_QTY = int(os.getenv("ALGO_BOLLINGER_ORDER_QTY", "10"))
 WINDOW = int(os.getenv("ALGO_BOLLINGER_WINDOW", "20"))
 STD_MULTIPLIER = float(os.getenv("ALGO_BOLLINGER_STD", "2.0"))
+STRATEGY_NAME = "Bollinger"
+STRATEGY_SLUG = "bollinger-reversion"
+
+telemetry = StrategyTelemetryClient(STRATEGY_NAME, STRATEGY_SLUG, USER_ID)
 
 
 def _submit_order(side: str) -> None:
@@ -55,6 +61,7 @@ def _bands(values: deque[float]) -> tuple[float, float, float] | None:
 
 
 async def run() -> None:
+    telemetry.init()
     closes: deque[float] = deque(maxlen=WINDOW)
 
     while True:
@@ -69,19 +76,53 @@ async def run() -> None:
                         if bar.get("symbol") != SYMBOL:
                             continue
 
+                        timestamp = str(bar.get("timestamp") or payload.get("timestamp") or "")
+                        telemetry.run(timestamp)
                         close = float(bar["close"])
                         closes.append(close)
                         computed = _bands(closes)
                         if computed is None:
+                            telemetry.no_data("Waiting for Bollinger window to warm up", timestamp)
                             continue
 
-                        _, upper, lower = computed
+                        middle, upper, lower = computed
+                        indicators = {"middle": middle, "upper": upper, "lower": lower, "window": WINDOW, "std_multiplier": STD_MULTIPLIER}
                         if close < lower:
+                            signal_payload = telemetry.signal(
+                                price=close,
+                                indicators=indicators,
+                                decision="BUY",
+                                reason="Price broke below the lower Bollinger band",
+                                timestamp=timestamp,
+                                input_data={"price": close, "close_history": list(closes)},
+                            )
+                            telemetry.trade_attempt(signal_payload, timestamp)
                             _submit_order("buy")
+                            telemetry.trade_success(timestamp=timestamp)
                         elif close > upper and _has_inventory():
+                            signal_payload = telemetry.signal(
+                                price=close,
+                                indicators=indicators,
+                                decision="SELL",
+                                reason="Price broke above the upper Bollinger band",
+                                timestamp=timestamp,
+                                input_data={"price": close, "close_history": list(closes)},
+                            )
+                            telemetry.trade_attempt(signal_payload, timestamp)
                             _submit_order("sell")
+                            telemetry.trade_success(timestamp=timestamp)
+                        else:
+                            telemetry.signal(
+                                price=close,
+                                indicators=indicators,
+                                decision="NO TRADE",
+                                reason="Price stayed within Bollinger bands",
+                                timestamp=timestamp,
+                                input_data={"price": close, "close_history": list(closes)},
+                            )
 
         except Exception as exc:
+            telemetry.crash(exc)
             print(f"[algo-bollinger] reconnecting after error: {exc}")
             await asyncio.sleep(2)
 

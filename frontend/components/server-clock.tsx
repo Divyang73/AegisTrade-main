@@ -3,11 +3,7 @@
 import { useEffect, useState } from 'react';
 
 import { apiGet } from '@/lib/api';
-
-type ServerTimeResponse = {
-  iso: string;
-  epoch_ms: number;
-};
+import type { SystemTime } from '@/lib/types';
 
 function formatServerTime(date: Date) {
   return new Intl.DateTimeFormat('en-US', {
@@ -31,6 +27,7 @@ function formatServerDate(date: Date) {
 
 export function ServerClock() {
   const [serverTime, setServerTime] = useState<Date | null>(null);
+  const [databaseTime, setDatabaseTime] = useState<Date | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -38,13 +35,14 @@ export function ServerClock() {
 
     async function syncClock() {
       try {
-        const payload = await apiGet<ServerTimeResponse>('/api/time');
+        const payload = await apiGet<SystemTime>('/api/system-time');
         if (cancelled) {
           return;
         }
 
-        const serverDate = new Date(payload.epoch_ms);
+        const serverDate = new Date(payload.systemTime);
         setServerTime(serverDate);
+        setDatabaseTime(payload.databaseTime ? new Date(payload.databaseTime) : null);
 
         const startMs = Date.now();
         timerId = window.setInterval(() => {
@@ -75,6 +73,9 @@ export function ServerClock() {
         <span className="text-[11px] text-zinc-400">{serverTime ? formatServerDate(serverTime) : 'Syncing date...'}</span>
         <span className="font-mono text-sm font-semibold tabular-nums text-emerald-200">
           {serverTime ? formatServerTime(serverTime) : 'Syncing...'} UTC
+        </span>
+        <span className="text-[11px] text-zinc-500">
+          {databaseTime ? `Data ${formatServerDate(databaseTime)} ${formatServerTime(databaseTime)} UTC` : 'Data syncing...'}
         </span>
       </div>
     </div>

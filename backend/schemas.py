@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from decimal import Decimal
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -45,6 +46,42 @@ class TradeFeedEntry(BaseModel):
     buyer_id: str
     seller_id: str
     timestamp: str
+    strategy: str | None = None
+    strategy_label: str | None = None
+    decision: str | None = None
+    reason: str | None = None
+
+
+class StrategyEventEntry(BaseModel):
+    type: str
+    timestamp: str
+    payload: dict[str, Any]
+
+
+class SystemTimeResponse(BaseModel):
+    systemTime: str
+    databaseTime: str | None
+    streamTime: str | None
+
+
+class StrategyRuntimeState(BaseModel):
+    strategy: str
+    user_id: str
+    status: str
+    last_run: str | None
+    last_signal: dict[str, Any] | None
+    latest_input: dict[str, Any] | None
+    indicators: dict[str, Any] | None
+    reason: str | None
+    error: str | None
+    last_trade: TradeFeedEntry | None
+    trade_count: int
+    recent_events: list[StrategyEventEntry]
+
+
+class StrategyStatusEntry(StrategyRuntimeState):
+    symbol: str
+    live: bool
 
 
 class OrderBookLevel(BaseModel):
@@ -114,6 +151,13 @@ class StrategyDetailResponse(BaseModel):
     user_id: str
     symbol: str
     live: bool
+    status: str
+    last_run: str | None
+    last_signal: dict[str, Any] | None
+    latest_input: dict[str, Any] | None
+    indicators: dict[str, Any] | None
+    reason: str | None
+    error: str | None
     metrics: StrategyMetrics
     current_positions: list[PortfolioPosition]
     live_trades: list[TradeFeedEntry]
@@ -121,4 +165,14 @@ class StrategyDetailResponse(BaseModel):
     equity_curve: list[EquityPoint]
     market_history: list[HistoricalBar]
     overlays: list[IndicatorSeries]
+    recent_events: list[StrategyEventEntry]
+
+
+class StrategyEventRequest(BaseModel):
+    strategy: str = Field(..., min_length=1)
+    strategy_name: str = Field(..., min_length=1)
+    user_id: str = Field(..., min_length=1)
+    event_type: str = Field(..., min_length=1)
+    timestamp: str | None = None
+    payload: dict[str, Any] = Field(default_factory=dict)
 

@@ -8,6 +8,8 @@ from urllib import request as urllib_request
 
 import websockets  # pyright: ignore[reportMissingImports]
 
+from strategy_telemetry import StrategyTelemetryClient
+
 
 API_URL = os.getenv("API_URL", "http://localhost:8000")
 WS_URL = os.getenv("WS_URL", "ws://localhost:8000/ws/market")
@@ -16,6 +18,10 @@ SYMBOL = os.getenv("ALGO_EMA_SYMBOL", "AAPL")
 ORDER_QTY = int(os.getenv("ALGO_EMA_ORDER_QTY", "10"))
 FAST_WINDOW = int(os.getenv("ALGO_EMA_FAST_WINDOW", "12"))
 SLOW_WINDOW = int(os.getenv("ALGO_EMA_SLOW_WINDOW", "26"))
+STRATEGY_NAME = "EMA"
+STRATEGY_SLUG = "ema-crossover"
+
+telemetry = StrategyTelemetryClient(STRATEGY_NAME, STRATEGY_SLUG, USER_ID)
 
 
 def _submit_order(side: str) -> None:
@@ -55,6 +61,7 @@ def _ema(previous: float | None, value: float, window: int) -> float:
 
 
 async def run() -> None:
+    telemetry.init()
     fast_ema: float | None = None
     slow_ema: float | None = None
     previous_fast: float | None = None
@@ -72,23 +79,69 @@ async def run() -> None:
                         if bar.get("symbol") != SYMBOL:
                             continue
 
+                        timestamp = str(bar.get("timestamp") or payload.get("timestamp") or "")
+                        telemetry.run(timestamp)
                         close = float(bar["close"])
                         fast_ema = _ema(fast_ema, close, FAST_WINDOW)
                         slow_ema = _ema(slow_ema, close, SLOW_WINDOW)
+                        indicators = {"fast_ema": fast_ema, "slow_ema": slow_ema, "fast_window": FAST_WINDOW, "slow_window": SLOW_WINDOW}
+
+                        if fast_ema is None or slow_ema is None:
+                            telemetry.no_data("Waiting for EMA windows to warm up", timestamp)
+                            continue
 
                         if previous_fast is not None and previous_slow is not None:
                             crossed_up = previous_fast <= previous_slow and fast_ema > slow_ema
                             crossed_down = previous_fast >= previous_slow and fast_ema < slow_ema
 
                             if crossed_up:
+                                signal_payload = telemetry.signal(
+                                    price=close,
+                                    indicators=indicators,
+                                    decision="BUY",
+                                    reason="Fast EMA crossed above slow EMA",
+                                    timestamp=timestamp,
+                                    input_data={"price": close, "fast_ema": fast_ema, "slow_ema": slow_ema},
+                                )
+                                telemetry.trade_attempt(signal_payload, timestamp)
                                 _submit_order("buy")
+                                telemetry.trade_success(timestamp=timestamp)
                             elif crossed_down and _has_inventory():
+                                signal_payload = telemetry.signal(
+                                    price=close,
+                                    indicators=indicators,
+                                    decision="SELL",
+                                    reason="Fast EMA crossed below slow EMA",
+                                    timestamp=timestamp,
+                                    input_data={"price": close, "fast_ema": fast_ema, "slow_ema": slow_ema},
+                                )
+                                telemetry.trade_attempt(signal_payload, timestamp)
                                 _submit_order("sell")
+                                telemetry.trade_success(timestamp=timestamp)
+                            else:
+                                telemetry.signal(
+                                    price=close,
+                                    indicators=indicators,
+                                    decision="NO TRADE",
+                                    reason="EMA crossover not confirmed",
+                                    timestamp=timestamp,
+                                    input_data={"price": close, "fast_ema": fast_ema, "slow_ema": slow_ema},
+                                )
+                        else:
+                            telemetry.signal(
+                                price=close,
+                                indicators=indicators,
+                                decision="NO TRADE",
+                                reason="Waiting for prior EMA values",
+                                timestamp=timestamp,
+                                input_data={"price": close, "fast_ema": fast_ema, "slow_ema": slow_ema},
+                            )
 
                         previous_fast = fast_ema
                         previous_slow = slow_ema
 
         except Exception as exc:
+            telemetry.crash(exc)
             print(f"[algo-ema] reconnecting after error: {exc}")
             await asyncio.sleep(2)
 
