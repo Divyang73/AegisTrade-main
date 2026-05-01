@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { ArrowLeft, BookMarked } from 'lucide-react';
 
-import { Badge, Panel, Tooltip } from '@/components/ui';
+import { Badge, Panel } from '@/components/ui';
 import { getStrategyContent } from '@/lib/strategy-content';
 import { getDefinition } from '@/lib/trading-glossary';
 
@@ -69,13 +69,9 @@ export default function LearnDetailPage({ params }: { params: { slug: string } }
           📚 key terms
         </div>
         <div className="flex flex-wrap gap-2">
-          {getKeyTermsForStrategy(content.slug).map((term) => (
-            <Tooltip key={term} definition={getDefinition(term)}>
-              <span className="inline-block rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-200">
-                {term.replace(/-/g, ' ')}
-              </span>
-            </Tooltip>
-          ))}
+              {getKeyTermsForStrategy(content.slug).map((term) => (
+                <span key={term} className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-1 text-xs text-zinc-300">{term}</span>
+              ))}
         </div>
       </Panel>
 

@@ -85,13 +85,11 @@ export function StatCard({
   value,
   delta,
   tone = 'neutral',
-  tooltip,
 }: {
   label: string;
   value: string;
   delta?: string;
   tone?: 'neutral' | 'positive' | 'negative';
-  tooltip?: string;
 }) {
   const toneClass =
     tone === 'positive'
@@ -102,10 +100,7 @@ export function StatCard({
 
   return (
     <Panel className="p-4">
-      <div className="flex items-center gap-2">
-        <span className="text-[11px] uppercase tracking-[0.24em] text-zinc-500">{label}</span>
-        {tooltip && <Tooltip content={tooltip} />}
-      </div>
+      <div className="text-[11px] uppercase tracking-[0.24em] text-zinc-500">{label}</div>
       <div className={cn('mt-2 text-2xl font-semibold tabular-nums tracking-tight', toneClass)}>{value}</div>
       {delta ? <div className="mt-1 text-xs leading-5 text-zinc-500">{delta}</div> : null}
     </Panel>
@@ -120,16 +115,12 @@ type TooltipProps = {
 };
 
 export function Tooltip({ content, title, definition, children }: TooltipProps) {
-  const tooltipContent = content ?? definition ?? '';
-
+  // Tooltip is intentionally a no-op to disable hover popovers.
+  // It still renders the child content or the info icon so callers don't break.
   return (
-    <div className="group relative inline-flex cursor-help items-center align-middle">
-      {children ?? <Info className="h-3.5 w-3.5 shrink-0 text-zinc-500 transition hover:text-zinc-300" />}
-      <div className="pointer-events-none absolute left-1/2 top-full z-50 mt-2 w-max max-w-[18rem] -translate-x-1/2 rounded-xl border border-white/10 bg-zinc-950/95 px-3 py-2 text-xs leading-5 text-white shadow-2xl opacity-0 shadow-black/40 backdrop-blur-xl transition duration-150 group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100">
-        {title ? <div className="mb-1 font-semibold text-emerald-300">{title}</div> : null}
-        <div className="whitespace-normal break-words">{tooltipContent}</div>
-      </div>
-    </div>
+    <span className="inline-flex items-center" aria-hidden>
+      {children ?? <Info className="h-3.5 w-3.5 shrink-0 text-zinc-500" />}
+    </span>
   );
 }
 
@@ -139,10 +130,11 @@ type LabelWithTooltipProps = {
 };
 
 export function LabelWithTooltip({ label, tooltip }: LabelWithTooltipProps) {
+  // Render label and a decorative info icon if tooltip text exists, but no popover.
   return (
     <div className="flex items-center gap-2">
       <span>{label}</span>
-      {tooltip && <Tooltip content={tooltip} />}
+      {tooltip ? <Tooltip /> : null}
     </div>
   );
 }
