@@ -5,7 +5,7 @@ import os
 from datetime import datetime, timezone
 from typing import Any
 
-import requests
+import http_client
 
 
 API_URL = os.getenv("API_URL", "http://localhost:8000")
@@ -31,7 +31,7 @@ class StrategyTelemetryClient:
             "payload": payload,
         }
         try:
-            requests.post(f"{API_URL}/api/strategy-events", json=body, timeout=5).raise_for_status()
+            http_client.post(f"{API_URL}/api/strategy-events", json=body, timeout=5).raise_for_status()
         except Exception as exc:
             print(f"[TELEMETRY] {self.strategy_name} publish failed: {exc}")
 

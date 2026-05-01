@@ -15,7 +15,14 @@ class Settings:
         "postgresql://postgres:postgres@localhost:5432/aegistrade",
     )
 
-    cors_origins: list[str] = field(default_factory=list)
+    cors_origins: list[str] = field(
+        default_factory=lambda: _parse_list(
+            os.getenv(
+                "CORS_ORIGINS",
+                "http://localhost:3000,http://127.0.0.1:3000",
+            )
+        )
+    )
 
     simulation_interval_seconds: float = float(
         os.getenv("SIMULATION_INTERVAL_SECONDS", "1.0")

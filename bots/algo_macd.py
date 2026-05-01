@@ -5,7 +5,7 @@ import json
 import os
 from typing import Any
 
-import requests
+import http_client
 import websockets
 
 
@@ -28,12 +28,12 @@ def _submit_order(side: str) -> None:
         "price": None,
         "quantity": ORDER_QTY,
     }
-    response = requests.post(f"{API_URL}/api/orders", json=payload, timeout=10)
+    response = http_client.post(f"{API_URL}/api/orders", json=payload, timeout=10)
     response.raise_for_status()
 
 
 def _has_inventory() -> bool:
-    response = requests.get(f"{API_URL}/api/portfolio/{USER_ID}", timeout=10)
+    response = http_client.get(f"{API_URL}/api/portfolio/{USER_ID}", timeout=10)
     response.raise_for_status()
     payload = response.json()
     for position in payload.get("positions", []):

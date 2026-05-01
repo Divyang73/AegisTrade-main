@@ -1,13 +1,12 @@
 from __future__ import annotations
 
 import asyncio
-import json
 import os
 from typing import Any
-from urllib import request as urllib_request
 
 import websockets  # pyright: ignore[reportMissingImports]
 
+import http_client
 from strategy_telemetry import StrategyTelemetryClient
 
 
@@ -33,20 +32,14 @@ def _submit_order(side: str) -> None:
         "price": None,
         "quantity": ORDER_QTY,
     }
-    request = urllib_request.Request(
-        f"{API_URL}/api/orders",
-        data=json.dumps(payload).encode("utf-8"),
-        headers={"Content-Type": "application/json"},
-        method="POST",
-    )
-    with urllib_request.urlopen(request, timeout=10):
-        pass
+    response = http_client.post(f"{API_URL}/api/orders", json=payload, timeout=10)
+    response.raise_for_status()
 
 
 def _has_inventory() -> bool:
-    request = urllib_request.Request(f"{API_URL}/api/portfolio/{USER_ID}", method="GET")
-    with urllib_request.urlopen(request, timeout=10) as response:
-        payload = json.loads(response.read().decode("utf-8"))
+    response = http_client.get(f"{API_URL}/api/portfolio/{USER_ID}", timeout=10)
+    response.raise_for_status()
+    payload = response.json()
     for position in payload.get("positions", []):
         if position.get("symbol") == SYMBOL and int(position.get("quantity", 0)) >= ORDER_QTY:
             return True

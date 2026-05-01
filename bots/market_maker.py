@@ -5,7 +5,7 @@ import json
 import os
 from typing import Any
 
-import requests
+import http_client
 import websockets
 
 from strategy_telemetry import StrategyTelemetryClient
@@ -30,7 +30,7 @@ def _post_order(symbol: str, side: str, price: float) -> None:
         "price": round(price, 4),
         "quantity": ORDER_QTY,
     }
-    response = requests.post(f"{API_URL}/api/orders", json=payload, timeout=10)
+    response = http_client.post(f"{API_URL}/api/orders", json=payload, timeout=10)
     response.raise_for_status()
 
 

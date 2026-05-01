@@ -44,6 +44,8 @@ export function TradingDashboard() {
   const chartContainerRef = useRef<HTMLDivElement | null>(null);
   const chartRef = useRef<any>(null);
   const seriesRef = useRef<any>(null);
+  const lastSeriesTimeRef = useRef<number | null>(null);
+  const resetInFlightRef = useRef(false);
 
   const latestBar = useMemo(() => {
     if (!lastTick) return null;
@@ -81,6 +83,11 @@ export function TradingDashboard() {
 
   useEffect(() => {
     refreshAll();
+  }, [selectedSymbol]);
+
+  useEffect(() => {
+    lastSeriesTimeRef.current = null;
+    resetInFlightRef.current = false;
   }, [selectedSymbol]);
 
   useEffect(() => {
@@ -130,7 +137,9 @@ export function TradingDashboard() {
 
   useEffect(() => {
     if (!seriesRef.current || history.length === 0) return;
-    seriesRef.current.setData(history.map(mapBarToPoint));
+    const mapped = history.map(mapBarToPoint);
+    seriesRef.current.setData(mapped);
+    lastSeriesTimeRef.current = mapped[mapped.length - 1]?.time ?? null;
     chartRef.current?.timeScale().fitContent();
   }, [history]);
 
@@ -143,7 +152,23 @@ export function TradingDashboard() {
 
       const activeBar = payload.bars.find((bar) => bar.symbol === selectedSymbol);
       if (activeBar && seriesRef.current) {
-        seriesRef.current.update(mapBarToPoint(activeBar));
+        const point = mapBarToPoint(activeBar);
+        const lastTime = lastSeriesTimeRef.current;
+        if (lastTime != null && point.time < lastTime) {
+          if (!resetInFlightRef.current) {
+            resetInFlightRef.current = true;
+            void refreshHistory()
+              .catch((exception) => {
+                setError(exception instanceof Error ? exception.message : 'Failed to reload market history');
+              })
+              .finally(() => {
+                resetInFlightRef.current = false;
+              });
+          }
+          return;
+        }
+        seriesRef.current.update(point);
+        lastSeriesTimeRef.current = point.time;
       }
     };
     socket.onerror = () => {
