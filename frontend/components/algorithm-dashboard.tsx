@@ -7,7 +7,8 @@ import { Activity, BookOpen, LineChart, RefreshCw, ShieldCheck, TrendingDown, Tr
 import { apiGet } from '@/lib/api';
 import type { AlgoStats, RecentTrade, StrategyDetail } from '@/lib/types';
 import { getStrategyContent } from '@/lib/strategy-content';
-import { Badge, Button, Panel, StatCard } from '@/components/ui';
+import { getDefinition } from '@/lib/trading-glossary';
+import { Badge, Button, Panel, StatCard, Tooltip } from '@/components/ui';
 
 type AlgoStatsResponse = Record<string, AlgoStats>;
 type StrategySummary = {
@@ -142,12 +143,24 @@ export function AlgorithmDashboard() {
               <tr>
                 <th className="px-4 py-3">Algorithm</th>
                 <th className="px-4 py-3">Status</th>
-                <th className="px-4 py-3">PnL</th>
-                <th className="px-4 py-3">Win Rate</th>
-                <th className="px-4 py-3">Sharpe</th>
-                <th className="px-4 py-3">Drawdown</th>
-                <th className="px-4 py-3">Trades</th>
-                <th className="px-4 py-3">Avg Trade</th>
+                <th className="px-4 py-3">
+                  <Tooltip definition={getDefinition('pnl')}>PnL</Tooltip>
+                </th>
+                <th className="px-4 py-3">
+                  <Tooltip definition={getDefinition('win-rate')}>Win Rate</Tooltip>
+                </th>
+                <th className="px-4 py-3">
+                  <Tooltip definition={getDefinition('sharpe')}>Sharpe</Tooltip>
+                </th>
+                <th className="px-4 py-3">
+                  <Tooltip definition={getDefinition('drawdown')}>Drawdown</Tooltip>
+                </th>
+                <th className="px-4 py-3">
+                  <Tooltip definition={getDefinition('win-loss-ratio')}>Trades</Tooltip>
+                </th>
+                <th className="px-4 py-3">
+                  <Tooltip definition={getDefinition('avg-trade')}>Avg Trade</Tooltip>
+                </th>
                 <th className="px-4 py-3">Link</th>
               </tr>
             </thead>

@@ -2,8 +2,9 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { ArrowLeft, BookMarked } from 'lucide-react';
 
-import { Badge, Panel } from '@/components/ui';
+import { Badge, Panel, Tooltip } from '@/components/ui';
 import { getStrategyContent } from '@/lib/strategy-content';
+import { getDefinition } from '@/lib/trading-glossary';
 
 function Section({ title, body }: { title: string; body: string }) {
   return (
@@ -12,6 +13,20 @@ function Section({ title, body }: { title: string; body: string }) {
       <p className="mt-3 text-sm leading-7 text-zinc-200">{body}</p>
     </Panel>
   );
+}
+
+function getKeyTermsForStrategy(slug: string): string[] {
+  const termMap: Record<string, string[]> = {
+    'sma-crossover': ['sma', 'moving-average', 'trend', 'crossover', 'bullish', 'bearish'],
+    'rsi': ['rsi', 'momentum', 'mean-reversion', 'overbought', 'oversold', 'extremes'],
+    'ema-crossover': ['ema', 'exponential', 'moving-average', 'crossover', 'trend', 'momentum'],
+    'bollinger-reversion': ['bollinger-bands', 'standard-deviation', 'mean-reversion', 'volatility', 'overbought', 'oversold'],
+    'macd-trend': ['macd', 'momentum', 'signal-line', 'crossover', 'trend', 'ema'],
+    'donchian-breakout': ['donchian-channel', 'breakout', 'trend', 'resistance', 'support', 'volatility'],
+    'roc-momentum': ['roc', 'momentum', 'acceleration', 'volatility', 'trend', 'extremes'],
+    'pairs-trading': ['pairs-trading', 'correlation', 'spread', 'market-neutral', 'z-score', 'mean-reversion'],
+  };
+  return termMap[slug] || [];
 }
 
 export default function LearnDetailPage({ params }: { params: { slug: string } }) {
@@ -48,6 +63,21 @@ export default function LearnDetailPage({ params }: { params: { slug: string } }
       </div>
 
       <Section title="Step-by-Step Walkthrough" body={content.walkthrough} />
+
+      <Panel className="p-5">
+        <div className="text-xs uppercase tracking-[0.22em] text-zinc-500 flex items-center gap-2 mb-3">
+          📚 Key Terms
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {getKeyTermsForStrategy(content.slug).map((term) => (
+            <Tooltip key={term} definition={getDefinition(term)}>
+              <span className="inline-block rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-200">
+                {term.replace(/-/g, ' ')}
+              </span>
+            </Tooltip>
+          ))}
+        </div>
+      </Panel>
 
       <Panel className="p-5">
         <div className="text-xs uppercase tracking-[0.22em] text-zinc-500">Next actions</div>
