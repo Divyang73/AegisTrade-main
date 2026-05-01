@@ -1,5 +1,4 @@
 import type { ButtonHTMLAttributes, HTMLAttributes, InputHTMLAttributes, PropsWithChildren, ReactNode, SelectHTMLAttributes } from 'react';
-import { Info } from 'lucide-react';
 
 function cn(...classes: Array<string | false | null | undefined>): string {
   return classes.filter(Boolean).join(' ');
@@ -107,34 +106,4 @@ export function StatCard({
   );
 }
 
-type TooltipProps = {
-  content?: string;
-  title?: string;
-  definition?: string;
-  children?: ReactNode;
-};
-
-export function Tooltip({ content, title, definition, children }: TooltipProps) {
-  // Tooltip is intentionally a no-op to disable hover popovers.
-  // It still renders the child content or the info icon so callers don't break.
-  return (
-    <span className="inline-flex items-center" aria-hidden>
-      {children ?? <Info className="h-3.5 w-3.5 shrink-0 text-zinc-500" />}
-    </span>
-  );
-}
-
-type LabelWithTooltipProps = {
-  label: string;
-  tooltip?: string;
-};
-
-export function LabelWithTooltip({ label, tooltip }: LabelWithTooltipProps) {
-  // Render label and a decorative info icon if tooltip text exists, but no popover.
-  return (
-    <div className="flex items-center gap-2">
-      <span>{label}</span>
-      {tooltip ? <Tooltip /> : null}
-    </div>
-  );
-}
+// Tooltip helpers removed intentionally.

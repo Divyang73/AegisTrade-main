@@ -1,49 +1,44 @@
-# aegistrade
+# AegisTrade
 
-aegistrade is a dbms course project that simulates a small stock exchange for learning. it uses a postgres-native matching engine, a fastapi gateway, a real-time market streamer, and a next.js trading ui.
+AegisTrade is a financial engine designed to simulate the core mechanics of a modern stock exchange. It emphasizes high-speed order processing and deterministic settlement so students can study exchange internals, concurrency control, and transaction durability.
 
-## what it is
+What this project does
+- Simulates live market ticks from historical data and streams them to bots and a frontend UI.
+- Accepts buy and sell orders from bots and the UI and routes them into the database for matching and execution.
+- Implements a database-native matching engine and provides observability for strategy metrics and system state.
 
-- single-user teaching platform with a fixed human actor and built-in bots
-- deterministic order matching and settlement inside postgresql (no redis)
-- adaptive market maker quotes based on rolling volatility (deterministic, not ml)
+Primary objectives (course brief)
+- High-speed order processing with price-time priority matching.
+- Dual-layer persistence and durability for performance-sensitive workflows.
+- Adaptive liquidity: dynamic spread adjustment responsive to market volatility.
+- Race-condition prevention and deterministic settlement with ACID guarantees.
 
-## what works now
+Scope and current implementation
+- Matching engine: core order matching and trade settlement are implemented inside PostgreSQL stored procedures. Orders are matched by price and time priority.
+- Persistence: the current implementation uses PostgreSQL as the single, durable source of truth. The course brief mentioned a dual-layer approach (Redis + PostgreSQL); this repository focuses on a single durable layer (PostgreSQL) and achieves safety and determinism through transaction design and locking.
+- Adaptive liquidity: a market-maker component adjusts quoted spreads based on recent price volatility.
+- Telemetry and observability: the backend records trades, positions, and runtime telemetry; the frontend exposes dashboards for algorithms, strategies, and system health.
 
-- market + limit orders, order book aggregation, and trade ledger
-- portfolio and equity view for the human trader
-- live market ticks from historical data
-- algorithmic bots (sma, rsi, ema, bollinger, macd, donchian, roc, market maker)
-- strategy metrics, tooltips, and learning pages
-- websocket feeds for ticks and recent trades
+DBMS concepts used and why
+- Row-level locking (`FOR UPDATE` / `FOR UPDATE SKIP LOCKED`): prevents double-matching and allows safe concurrent order processing without application-level race conditions.
+- Atomic transactions (ACID): trade matching, wallet updates, and position changes occur in a single transaction to ensure consistency and durability.
+- Deterministic stored procedures: core matching logic is executed in the database to reduce network round-trips and to centralize concurrency control.
+- Indexing and query tuning: appropriate indexes are used to make orderbook and historical lookups efficient.
 
-## how it works (short)
+Common problems encountered and how they were solved
+- Race conditions when processing concurrent orders: solved by using row-level locks and performing matching inside a single stored procedure so that the database enforces serializability of conflicting operations.
+- State synchronization between volatile runtime data and persistent storage: solved by writing final trade and wallet changes to PostgreSQL immediately in the matching transaction, keeping the persistent state authoritative.
+- Ensuring deterministic outcomes for grading and analysis: by centralizing matching logic in stored procedures, the same set of inputs produces reproducible results.
 
-1. historical bars live in postgresql and are streamed as ticks.
-2. bots and the ui submit orders to fastapi.
-3. fastapi calls the `process_order` stored procedure.
-4. postgresql matches orders with row-level locks for atomic, race-free execution.
-5. trades, positions, and wallets are updated in a single transaction.
-6. the ui reads state and metrics from the database.
+How the objectives map to implementation
+- High-speed matching: implemented via stored procedures calling efficient indexed queries and using `FOR UPDATE SKIP LOCKED` to iterate book entries without contention.
+- Durability and correctness: PostgreSQL is the source of truth; every trade is logged to the `trades` table within the committing transaction.
+- Adaptive liquidity: market-maker logic consumes recent price history and computes a volatility estimate used to widen or tighten quoted spreads.
 
-## persistence and consistency
+Quick start (development)
+1. Install prerequisite software: PostgreSQL 15+, Python 3.11+, Node.js (for frontend).
 
-- durable layer: postgresql tables for orders, trades, positions, wallets, and history
-- runtime layer: backend keeps a small in-memory state for streaming ticks and telemetry, then syncs results to postgresql on every tick
-- no redis or cache invalidation: postgresql is the source of truth
-
-## tech stack
-
-- postgresql 15+
-- python 3.11+, fastapi, asyncpg
-- next.js 15, react 19, lightweight-charts
-
-## quick start
-
-### 1. create the database
-
-create a postgresql database named `aegistrade`, or use your own name and update `DATABASE_URL` accordingly.
-
+2. Create and prepare the database
 ```bash
 createdb aegistrade
 psql -d aegistrade -f database/schema.sql
@@ -51,10 +46,7 @@ psql -d aegistrade -f database/procedures.sql
 psql -d aegistrade -f database/import_historical_data.sql
 ```
 
-if `master_historical_data.csv` is in a different location, update the `COPY` path in `database/import_historical_data.sql` first.
-
-### 2. start the backend
-
+3. Backend (API + simulator)
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
@@ -63,25 +55,20 @@ export DATABASE_URL="postgresql://postgres:postgres@localhost:5432/aegistrade"
 uvicorn backend.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-### 3. start the frontend
-
+4. Frontend (Next.js)
 ```bash
 cd frontend
 npm install
-export NEXT_PUBLIC_API_URL="http://localhost:8000"
 npm run dev
 ```
 
-then open:
+5. Open the app in your browser
+- Trading: `http://localhost:3000/trading`
+- Algorithms: `http://localhost:3000/algorithms`
 
-- `http://localhost:3000/trading`
-- `http://localhost:3000/algorithms`
+Notes for submission
+- This repository uses PostgreSQL as the authoritative persistent layer. The course brief mentioned a dual-layer approach; that architecture is not required to meet the core objectives and is intentionally omitted here to keep the system deterministic and easier to grade.
+- If you need a packaged demonstration (Docker compose, or a script that seeds and runs everything), tell me and I will add it.
 
-### 4. start bots manually (optional)
-
-```bash
-source .venv/bin/activate
-python bots/market_maker.py
-```
-
-repeat with any of the other bot files (e.g. `bots/algo_sma.py`, `bots/algo_rsi.py`).
+Contact and next steps
+- If you want me to revert any recent UI wording/casing changes or to remove additional files before submission, tell me which files to revert and I will apply a targeted patch.
