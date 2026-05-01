@@ -79,30 +79,7 @@ Then open:
 - `http://localhost:3000/trading`
 - `http://localhost:3000/algorithms`
 
-### 4. Start backend + all bots at once (recommended)
-
-From the repository root:
-
-```bash
-chmod +x start_all.sh
-./start_all.sh
-```
-
-This starts:
-
-- backend (`backend.main:app`)
-- market maker (`bots/market_maker.py`)
-- SMA (`bots/algo_sma.py`)
-- RSI (`bots/algo_rsi.py`)
-- EMA (`bots/algo_ema.py`)
-- Bollinger (`bots/algo_bollinger.py`)
-- MACD (`bots/algo_macd.py`)
-- Donchian (`bots/algo_donchian.py`)
-- ROC (`bots/algo_roc.py`)
-
-Logs are written to `logs/*.log`.
-
-### 5. Start bots manually (optional)
+### 4. Start bots manually (optional)
 
 Open extra terminals if you want the simulation to trade automatically.
 

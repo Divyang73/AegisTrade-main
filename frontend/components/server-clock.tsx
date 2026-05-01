@@ -27,11 +27,10 @@ function formatServerDate(date: Date) {
 
 export function ServerClock() {
   const [serverTime, setServerTime] = useState<Date | null>(null);
-  const [databaseTime, setDatabaseTime] = useState<Date | null>(null);
+  const [dataTime, setDataTime] = useState<Date | null>(null);
 
   useEffect(() => {
     let cancelled = false;
-    let timerId: number | undefined;
 
     async function syncClock() {
       try {
@@ -42,13 +41,8 @@ export function ServerClock() {
 
         const serverDate = new Date(payload.systemTime);
         setServerTime(serverDate);
-        setDatabaseTime(payload.databaseTime ? new Date(payload.databaseTime) : null);
-
-        const startMs = Date.now();
-        timerId = window.setInterval(() => {
-          const elapsedMs = Date.now() - startMs;
-          setServerTime(new Date(serverDate.getTime() + elapsedMs));
-        }, 1000);
+        const dataTimestamp = payload.streamTime ?? payload.databaseTime;
+        setDataTime(dataTimestamp ? new Date(dataTimestamp) : null);
       } catch {
         if (!cancelled) {
           setServerTime(new Date());
@@ -60,9 +54,6 @@ export function ServerClock() {
 
     return () => {
       cancelled = true;
-      if (timerId !== undefined) {
-        window.clearInterval(timerId);
-      }
     };
   }, []);
 
@@ -75,7 +66,7 @@ export function ServerClock() {
           {serverTime ? formatServerTime(serverTime) : 'Syncing...'} UTC
         </span>
         <span className="text-[11px] text-zinc-500">
-          {databaseTime ? `Data ${formatServerDate(databaseTime)} ${formatServerTime(databaseTime)} UTC` : 'Data syncing...'}
+          {dataTime ? `Data ${formatServerDate(dataTime)} ${formatServerTime(dataTime)} UTC` : 'Data syncing...'}
         </span>
       </div>
     </div>

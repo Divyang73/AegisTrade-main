@@ -916,11 +916,12 @@ async def get_algorithm_detail(slug: str) -> StrategyDetailResponse:
 @app.get("/api/system-time", response_model=SystemTimeResponse)
 async def system_time() -> SystemTimeResponse:
     system_now = datetime.now(timezone.utc).isoformat()
-    database_time = await _latest_database_time()
     streamer = getattr(app.state, "streamer", None)
     stream_time = None
     if streamer is not None and getattr(streamer, "latest_snapshot", None) is not None:
         stream_time = streamer.latest_snapshot.get("timestamp")
+
+    database_time = stream_time or await _latest_database_time()
 
     return SystemTimeResponse(systemTime=system_now, databaseTime=database_time, streamTime=stream_time)
 

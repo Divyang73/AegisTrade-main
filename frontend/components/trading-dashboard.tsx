@@ -1,20 +1,12 @@
 'use client';
 
-import type { ReactNode } from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createChart } from 'lightweight-charts';
-import { AlertTriangle, BarChart3, CandlestickChart, LayoutGrid, RefreshCw, Send, TrendingDown, TrendingUp } from 'lucide-react';
+import { AlertTriangle, BarChart3, CandlestickChart, LayoutGrid, RefreshCw, TrendingDown, TrendingUp } from 'lucide-react';
 
-import { API_BASE, apiGet, apiPost } from '@/lib/api';
+import { API_BASE, apiGet } from '@/lib/api';
 import type { MarketBar, MarketTick, OrderBook, Portfolio, RecentTrade } from '@/lib/types';
-import { Badge, Button, Input, Panel, Select } from '@/components/ui';
-
-type OrderFormState = {
-  side: 'buy' | 'sell';
-  orderType: 'market' | 'limit';
-  quantity: string;
-  price: string;
-};
+import { Badge, Button, Panel, Select } from '@/components/ui';
 
 const SYMBOLS = ['AAPL', 'MSFT', 'TSLA'];
 
@@ -48,13 +40,6 @@ export function TradingDashboard() {
   const [recentTrades, setRecentTrades] = useState<RecentTrade[]>([]);
   const [lastTick, setLastTick] = useState<MarketTick | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
-  const [form, setForm] = useState<OrderFormState>({
-    side: 'buy',
-    orderType: 'limit',
-    quantity: '10',
-    price: '',
-  });
 
   const chartContainerRef = useRef<HTMLDivElement | null>(null);
   const chartRef = useRef<any>(null);
@@ -176,26 +161,6 @@ export function TradingDashboard() {
     return () => window.clearInterval(refreshInterval);
   }, [selectedSymbol]);
 
-  async function handleSubmitOrder() {
-    setSubmitting(true);
-    try {
-      const body = {
-        user_id: 'human-user',
-        symbol: selectedSymbol,
-        side: form.side,
-        order_type: form.orderType,
-        price: form.orderType === 'market' ? null : Number(form.price),
-        quantity: Number(form.quantity),
-      };
-      await apiPost('/api/orders', body);
-      await Promise.all([refreshOrderBook(), refreshPortfolio(), refreshTrades()]);
-      setError(null);
-    } catch (exception) {
-      setError(exception instanceof Error ? exception.message : 'Order submission failed');
-    } finally {
-      setSubmitting(false);
-    }
-  }
 
   const spread =
     orderBook && orderBook.bids.length > 0 && orderBook.asks.length > 0
@@ -321,67 +286,15 @@ export function TradingDashboard() {
           <div className="mb-4 flex items-center justify-between">
             <div>
               <div className="flex items-center gap-2 text-xs uppercase tracking-[0.24em] text-zinc-500">
-                <Send className="h-4 w-4 text-amber-300" />
-                Order entry
+                <TrendingUp className="h-4 w-4 text-emerald-300" />
+                Liquidity
               </div>
-              <h2 className="mt-2 text-lg font-semibold text-white">Submit order</h2>
+              <h2 className="mt-2 text-lg font-semibold text-white">Market depth snapshot</h2>
             </div>
-            <Badge>human-user</Badge>
+            <Badge>{selectedSymbol}</Badge>
           </div>
 
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-3">
-              <Field label="Side">
-                <Select value={form.side} onChange={(event) => setForm({ ...form, side: event.target.value as OrderFormState['side'] })}>
-                  <option value="buy" className="bg-black">
-                    Buy
-                  </option>
-                  <option value="sell" className="bg-black">
-                    Sell
-                  </option>
-                </Select>
-              </Field>
-              <Field label="Type">
-                <Select value={form.orderType} onChange={(event) => setForm({ ...form, orderType: event.target.value as OrderFormState['orderType'] })}>
-                  <option value="limit" className="bg-black">
-                    Limit
-                  </option>
-                  <option value="market" className="bg-black">
-                    Market
-                  </option>
-                </Select>
-              </Field>
-            </div>
-
-            <Field label="Quantity">
-              <Input
-                type="number"
-                min="1"
-                step="1"
-                value={form.quantity}
-                onChange={(event) => setForm({ ...form, quantity: event.target.value })}
-                placeholder="10"
-              />
-            </Field>
-
-            <Field label="Price">
-              <Input
-                type="number"
-                min="0"
-                step="0.01"
-                value={form.price}
-                onChange={(event) => setForm({ ...form, price: event.target.value })}
-                placeholder={form.orderType === 'market' ? 'Market order' : 'Enter limit price'}
-                disabled={form.orderType === 'market'}
-              />
-            </Field>
-
-            <Button className="w-full" onClick={() => void handleSubmitOrder()} disabled={submitting}>
-              {submitting ? 'Submitting...' : 'Place order'}
-            </Button>
-          </div>
-
-          <div className="mt-5 grid grid-cols-2 gap-3 text-xs text-zinc-400">
+          <div className="grid grid-cols-2 gap-3 text-xs text-zinc-400">
             <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-3">
               <TrendingUp className="h-4 w-4 text-emerald-300" />
               <div className="mt-2">Buy-side liquidity</div>
@@ -396,46 +309,6 @@ export function TradingDashboard() {
         </Panel>
       </div>
 
-      <Panel className="overflow-hidden p-4">
-        <div className="mb-4 flex items-center justify-between">
-          <div>
-            <div className="flex items-center gap-2 text-xs uppercase tracking-[0.24em] text-zinc-500">
-              <LayoutGrid className="h-4 w-4 text-violet-300" />
-              Wallet status
-            </div>
-            <h2 className="mt-2 text-lg font-semibold text-white">Human wallet snapshot</h2>
-          </div>
-          <Badge>{portfolio ? formatCurrency(portfolio.cash_balance) : '--'}</Badge>
-        </div>
-
-        <div className="grid gap-3 md:grid-cols-3">
-          <Stat
-            label="Current wallet cash"
-            value={portfolio ? formatCurrency(portfolio.cash_balance) : '--'}
-            delta={portfolio ? 'Available buying power' : 'Loading wallet'}
-          />
-          <Stat
-            label="Total quantity held"
-            value={portfolio ? String(totalQuantity) : '--'}
-            delta={portfolio ? `Across ${portfolio.positions.length} positions` : 'Loading positions'}
-          />
-          <Stat
-            label="Last trade profit"
-            value={lastTradeProfit != null ? formatCurrency(lastTradeProfit) : '--'}
-            delta={latestUserTrade ? `${latestUserTrade.symbol} • ${latestUserTrade.buyer_id === 'human-user' ? 'buy' : 'sell'} fill` : 'No user trade yet'}
-          />
-        </div>
-
-        <div className="mt-4 rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-sm text-zinc-400">
-          <div className="flex items-center gap-2 text-white">
-            <LayoutGrid className="h-4 w-4 text-violet-300" />
-            Wallet summary
-          </div>
-          <p className="mt-2 leading-6">
-            This panel replaces the empty holdings table with your live wallet cash, the total quantity currently held, and the estimated profit or loss on your most recent trade using the latest market price.
-          </p>
-        </div>
-      </Panel>
     </div>
   );
 }
@@ -447,15 +320,6 @@ function Stat({ label, value, delta }: { label: string; value: string; delta: st
       <div className="mt-2 text-2xl font-semibold text-white">{value}</div>
       <div className="mt-1 text-xs text-zinc-400">{delta}</div>
     </div>
-  );
-}
-
-function Field({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <label className="block space-y-2">
-      <span className="text-xs uppercase tracking-[0.2em] text-zinc-500">{label}</span>
-      {children}
-    </label>
   );
 }
 
