@@ -1,5 +1,5 @@
-import { useState } from 'react';
 import type { ButtonHTMLAttributes, HTMLAttributes, InputHTMLAttributes, PropsWithChildren, SelectHTMLAttributes } from 'react';
+import { Info } from 'lucide-react';
 
 function cn(...classes: Array<string | false | null | undefined>): string {
   return classes.filter(Boolean).join(' ');
@@ -85,11 +85,13 @@ export function StatCard({
   value,
   delta,
   tone = 'neutral',
+  tooltip,
 }: {
   label: string;
   value: string;
   delta?: string;
   tone?: 'neutral' | 'positive' | 'negative';
+  tooltip?: string;
 }) {
   const toneClass =
     tone === 'positive'
@@ -100,36 +102,44 @@ export function StatCard({
 
   return (
     <Panel className="p-4">
-      <div className="text-[11px] uppercase tracking-[0.24em] text-zinc-500">{label}</div>
+      <div className="flex items-center gap-2">
+        <span className="text-[11px] uppercase tracking-[0.24em] text-zinc-500">{label}</span>
+        {tooltip && <Tooltip content={tooltip} />}
+      </div>
       <div className={cn('mt-2 text-2xl font-semibold tabular-nums tracking-tight', toneClass)}>{value}</div>
       {delta ? <div className="mt-1 text-xs leading-5 text-zinc-500">{delta}</div> : null}
     </Panel>
   );
 }
 
-type TooltipProps = PropsWithChildren<{
-  definition: string;
-  className?: string;
-}>;
+type TooltipProps = {
+  content: string;
+  title?: string;
+};
 
-export function Tooltip({ children, definition, className }: TooltipProps) {
-  const [showTooltip, setShowTooltip] = useState(false);
-
+export function Tooltip({ content, title }: TooltipProps) {
   return (
-    <div className={cn('relative inline-block', className)}>
-      <div
-        onMouseEnter={() => setShowTooltip(true)}
-        onMouseLeave={() => setShowTooltip(false)}
-        className="cursor-help border-b border-dashed border-white/40 hover:border-emerald-400/60 transition"
-      >
-        {children}
+    <div className="group relative inline-flex cursor-help">
+      <Info className="h-3.5 w-3.5 text-zinc-500 transition hover:text-zinc-300" />
+      <div className="pointer-events-none absolute bottom-full left-1/2 mb-2 -translate-x-1/2 transform whitespace-nowrap rounded-lg border border-white/10 bg-gradient-to-b from-white/[0.15] to-white/[0.05] px-3 py-2 text-xs text-white shadow-lg backdrop-blur-xl opacity-0 transition-opacity duration-200 group-hover:pointer-events-auto group-hover:opacity-100">
+        {title && <div className="font-semibold text-emerald-300">{title}</div>}
+        <div className="whitespace-normal max-w-xs">{content}</div>
+        <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-white/[0.15]" />
       </div>
-      {showTooltip && (
-        <div className="absolute bottom-full left-1/2 z-50 -translate-x-1/2 mb-2 px-3 py-2 bg-zinc-900 border border-white/20 rounded-lg text-xs text-zinc-200 whitespace-nowrap pointer-events-none shadow-lg">
-          {definition}
-          <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-zinc-900" />
-        </div>
-      )}
+    </div>
+  );
+}
+
+type LabelWithTooltipProps = {
+  label: string;
+  tooltip?: string;
+};
+
+export function LabelWithTooltip({ label, tooltip }: LabelWithTooltipProps) {
+  return (
+    <div className="flex items-center gap-2">
+      <span>{label}</span>
+      {tooltip && <Tooltip content={tooltip} />}
     </div>
   );
 }

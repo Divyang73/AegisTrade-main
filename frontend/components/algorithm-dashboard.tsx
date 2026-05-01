@@ -7,8 +7,8 @@ import { Activity, BookOpen, LineChart, RefreshCw, ShieldCheck, TrendingDown, Tr
 import { apiGet } from '@/lib/api';
 import type { AlgoStats, RecentTrade, StrategyDetail } from '@/lib/types';
 import { getStrategyContent } from '@/lib/strategy-content';
-import { getDefinition } from '@/lib/trading-glossary';
 import { Badge, Button, Panel, StatCard, Tooltip } from '@/components/ui';
+import { tradingGlossary } from '@/lib/trading-glossary';
 
 type AlgoStatsResponse = Record<string, AlgoStats>;
 type StrategySummary = {
@@ -117,9 +117,27 @@ export function AlgorithmDashboard() {
         {error ? <div className="mt-5 rounded-2xl border border-red-500/20 bg-red-500/10 p-4 text-sm text-red-100">{error}</div> : null}
 
         <div className="mt-5 grid gap-3 md:grid-cols-3">
-          <StatCard label="Top performer" value={winner && top ? formatCurrency(top.pnl) : '--'} delta={winner ? winner.slug : 'Awaiting stats'} tone={top && top.pnl >= 0 ? 'positive' : 'negative'} />
-          <StatCard label="Trailing strategy" value={worst && bottom ? formatCurrency(bottom.pnl) : '--'} delta={worst ? worst.slug : 'Awaiting stats'} tone={bottom && bottom.pnl >= 0 ? 'positive' : 'negative'} />
-          <StatCard label="Live algorithms" value={String(liveAlgorithms.length)} delta="Connected to strategy registry" tone="neutral" />
+          <StatCard 
+            label="Top performer" 
+            value={winner && top ? formatCurrency(top.pnl) : '--'} 
+            delta={winner ? winner.slug : 'Awaiting stats'} 
+            tone={top && top.pnl >= 0 ? 'positive' : 'negative'} 
+            tooltip={tradingGlossary.pnl.definition}
+          />
+          <StatCard 
+            label="Trailing strategy" 
+            value={worst && bottom ? formatCurrency(bottom.pnl) : '--'} 
+            delta={worst ? worst.slug : 'Awaiting stats'} 
+            tone={bottom && bottom.pnl >= 0 ? 'positive' : 'negative'}
+            tooltip={tradingGlossary.pnl.definition}
+          />
+          <StatCard 
+            label="Live algorithms" 
+            value={String(liveAlgorithms.length)} 
+            delta="Connected to strategy registry" 
+            tone="neutral"
+            tooltip="Number of algorithms currently active and trading in the live market."
+          />
         </div>
       </Panel>
 
@@ -143,24 +161,24 @@ export function AlgorithmDashboard() {
               <tr>
                 <th className="px-4 py-3">Algorithm</th>
                 <th className="px-4 py-3">Status</th>
-                <th className="px-4 py-3">
-                  <Tooltip definition={getDefinition('pnl')}>PnL</Tooltip>
+                <th className="px-4 py-3 flex items-center gap-2">
+                  <span>PnL</span>
+                  <Tooltip content={tradingGlossary.pnl.definition} />
                 </th>
-                <th className="px-4 py-3">
-                  <Tooltip definition={getDefinition('win-rate')}>Win Rate</Tooltip>
+                <th className="px-4 py-3 flex items-center gap-2">
+                  <span>Win Rate</span>
+                  <Tooltip content={tradingGlossary.winRate.definition} />
                 </th>
-                <th className="px-4 py-3">
-                  <Tooltip definition={getDefinition('sharpe')}>Sharpe</Tooltip>
+                <th className="px-4 py-3 flex items-center gap-2">
+                  <span>Sharpe</span>
+                  <Tooltip content={tradingGlossary.sharpeRatio.howToUse} />
                 </th>
-                <th className="px-4 py-3">
-                  <Tooltip definition={getDefinition('drawdown')}>Drawdown</Tooltip>
+                <th className="px-4 py-3 flex items-center gap-2">
+                  <span>Drawdown</span>
+                  <Tooltip content={tradingGlossary.maxDrawdown.definition} />
                 </th>
-                <th className="px-4 py-3">
-                  <Tooltip definition={getDefinition('win-loss-ratio')}>Trades</Tooltip>
-                </th>
-                <th className="px-4 py-3">
-                  <Tooltip definition={getDefinition('avg-trade')}>Avg Trade</Tooltip>
-                </th>
+                <th className="px-4 py-3">Trades</th>
+                <th className="px-4 py-3">Avg Trade</th>
                 <th className="px-4 py-3">Link</th>
               </tr>
             </thead>
@@ -250,6 +268,7 @@ export function AlgorithmDashboard() {
               <div className="flex items-center gap-2 text-xs uppercase tracking-[0.22em] text-emerald-200">
                 <TrendingUp className="h-4 w-4" />
                 Momentum read
+                <Tooltip content="Trend-following strategies use moving averages (SMA, EMA), MACD, Donchian channels, and ROC to catch and ride price trends." />
               </div>
               <div className="mt-2 text-lg font-semibold">Trend models now include SMA, EMA, MACD, Donchian breakouts, and ROC momentum.</div>
               <div className="mt-1 text-emerald-200/80">The ranking is based on live PnL, and every row opens the dedicated strategy page.</div>
@@ -258,6 +277,7 @@ export function AlgorithmDashboard() {
               <div className="flex items-center gap-2 text-xs uppercase tracking-[0.22em] text-sky-200">
                 <TrendingDown className="h-4 w-4" />
                 Risk read
+                <Tooltip content="Mean-reversion strategies (RSI, Bollinger Bands) target price extremes and pullbacks. Sharpe ratio measures risk-adjusted returns." />
               </div>
               <div className="mt-2 text-lg font-semibold">RSI, Bollinger, and mean-reversion systems target pullbacks and extremes.</div>
               <div className="mt-1 text-sky-200/80">Sharpe, drawdown, and average trade size are pulled from each strategy’s detail metrics.</div>
@@ -271,6 +291,7 @@ export function AlgorithmDashboard() {
               <div className="flex items-center gap-2 text-xs uppercase tracking-[0.24em] text-zinc-500">
                 <Activity className="h-4 w-4 text-violet-300" />
                 Recent fills
+                <Tooltip content={tradingGlossary.trade.definition + ' Each row shows when a bot executed a trade.'} />
               </div>
               <h2 className="mt-2 text-lg font-semibold text-white">Bot trade feed</h2>
             </div>
