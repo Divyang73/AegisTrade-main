@@ -60,13 +60,13 @@ export function ServerClock() {
   return (
     <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-black/35 px-4 py-2">
       <div className="flex flex-col">
-        <span className="text-[10px] uppercase tracking-[0.22em] text-zinc-500">Global clock</span>
-        <span className="text-[11px] text-zinc-400">{serverTime ? formatServerDate(serverTime) : 'Syncing date...'}</span>
+        <span className="text-[10px] uppercase tracking-[0.22em] text-zinc-500">global clock</span>
+        <span className="text-[11px] text-zinc-400">{serverTime ? formatServerDate(serverTime) : 'syncing date...'}</span>
         <span className="font-mono text-sm font-semibold tabular-nums text-emerald-200">
-          {serverTime ? formatServerTime(serverTime) : 'Syncing...'} UTC
+          {serverTime ? formatServerTime(serverTime) : 'syncing...'} utc
         </span>
         <span className="text-[11px] text-zinc-500">
-          {dataTime ? `Data ${formatServerDate(dataTime)} ${formatServerTime(dataTime)} UTC` : 'Data syncing...'}
+          {dataTime ? `data ${formatServerDate(dataTime)} ${formatServerTime(dataTime)} utc` : 'data syncing...'}
         </span>
       </div>
     </div>

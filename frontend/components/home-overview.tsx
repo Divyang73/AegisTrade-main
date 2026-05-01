@@ -41,7 +41,7 @@ export function HomeOverview() {
       setAlgorithms(algoData.filter((algo) => algo.live));
       setError(null);
     } catch (exception) {
-      setError(exception instanceof Error ? exception.message : 'Failed to load homepage data');
+      setError(exception instanceof Error ? exception.message : 'failed to load homepage data');
     }
   }
 
@@ -61,10 +61,10 @@ export function HomeOverview() {
   return (
     <div className="space-y-6 pb-10">
       <Panel className="p-6">
-        <Badge>Account overview</Badge>
-        <h1 className="mt-3 text-3xl font-semibold tracking-tight text-white">AegisTrade Control Center</h1>
+        <Badge>account overview</Badge>
+        <h1 className="mt-3 text-3xl font-semibold tracking-tight text-white">aegistrade control center</h1>
         <p className="mt-2 max-w-2xl text-sm text-zinc-400">
-          Submit your own orders from Trading, and your wallet and equity will update automatically as orders are filled.
+          submit your own orders from trading, and your wallet and equity update automatically as orders fill.
         </p>
 
         {error ? (
@@ -72,12 +72,12 @@ export function HomeOverview() {
         ) : null}
 
         <div className="mt-5 grid gap-3 md:grid-cols-3">
-          <StatCard label="Wallet cash" value={portfolio ? formatCurrency(portfolio.cash_balance) : '--'} tone="neutral" />
-          <StatCard label="Portfolio equity" value={portfolio ? formatCurrency(portfolio.equity) : '--'} tone="neutral" />
+          <StatCard label="wallet cash" value={portfolio ? formatCurrency(portfolio.cash_balance) : '--'} tone="neutral" />
+          <StatCard label="portfolio equity" value={portfolio ? formatCurrency(portfolio.equity) : '--'} tone="neutral" />
           <StatCard
-            label="Best live algorithm"
+            label="best live algorithm"
             value={winner ? winner.slug : '--'}
-            delta={winner ? `PnL ${formatCurrency(stats[winner.user_id]?.pnl ?? 0)}` : 'Awaiting stats'}
+            delta={winner ? `pnl ${formatCurrency(stats[winner.user_id]?.pnl ?? 0)}` : 'awaiting stats'}
             tone="positive"
           />
         </div>
@@ -87,28 +87,28 @@ export function HomeOverview() {
         <Panel className="p-5">
           <div className="flex items-center gap-2 text-xs uppercase tracking-[0.22em] text-zinc-500">
             <Wallet className="h-4 w-4 text-emerald-300" />
-            Manual trading
+            manual trading
           </div>
-          <h2 className="mt-2 text-xl font-semibold text-white">Place your own orders</h2>
+          <h2 className="mt-2 text-xl font-semibold text-white">place your own orders</h2>
           <p className="mt-2 text-sm leading-6 text-zinc-400">
-            Use market or limit orders from the trading console. As trades execute, wallet cash, equity, and positions refresh live.
+            use market or limit orders from the trading console. as trades execute, wallet cash, equity, and positions refresh live.
           </p>
           <Link href="/trading" className="mt-4 inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.06] px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/[0.12]">
-            Open trading console <ArrowRight className="h-4 w-4" />
+            open trading console <ArrowRight className="h-4 w-4" />
           </Link>
         </Panel>
 
         <Panel className="p-5">
           <div className="flex items-center gap-2 text-xs uppercase tracking-[0.22em] text-zinc-500">
             <Bot className="h-4 w-4 text-sky-300" />
-            Algorithm desk
+            algorithm desk
           </div>
-          <h2 className="mt-2 text-xl font-semibold text-white">Compare all algorithms</h2>
+          <h2 className="mt-2 text-xl font-semibold text-white">compare all algorithms</h2>
           <p className="mt-2 text-sm leading-6 text-zinc-400">
-            View head-to-head stats, compare PnL and win rate, and inspect the current best-performing algorithm.
+            view head-to-head stats, compare pnl and win rate, and inspect the current best-performing algorithm.
           </p>
           <Link href="/algorithms" className="mt-4 inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.06] px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/[0.12]">
-            Open algorithms page <ArrowRight className="h-4 w-4" />
+            open algorithms page <ArrowRight className="h-4 w-4" />
           </Link>
         </Panel>
       </div>

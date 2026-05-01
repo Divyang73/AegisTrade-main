@@ -52,13 +52,13 @@ function statusTone(status: string) {
 function statusLabel(status: string) {
   switch (status) {
     case 'active':
-      return 'Active';
+      return 'active';
     case 'no_signals':
-      return 'No Signals';
+      return 'no signals';
     case 'error':
-      return 'Error';
+      return 'error';
     default:
-      return 'Not Running';
+      return 'not running';
   }
 }
 
@@ -83,7 +83,7 @@ export function SystemStateDashboard() {
       setTrades(tradeData);
       setError(null);
     } catch (exception) {
-      setError(exception instanceof Error ? exception.message : 'Failed to load system state');
+      setError(exception instanceof Error ? exception.message : 'failed to load system state');
     }
   }
 
@@ -116,20 +116,20 @@ export function SystemStateDashboard() {
     <Panel className="overflow-hidden p-6">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <Badge>System observability</Badge>
-          <h1 className="mt-3 text-3xl font-semibold tracking-tight text-white">Global clock + system state dashboard</h1>
+          <Badge>system observability</Badge>
+          <h1 className="mt-3 text-3xl font-semibold tracking-tight text-white">global clock + system state dashboard</h1>
           <p className="mt-2 max-w-3xl text-sm text-zinc-400">
-            Monitor the current system time, data-time position, live trades, and the latest runtime signal from each strategy.
+            monitor the current system time, data-time position, live trades, and the latest runtime signal from each strategy.
           </p>
         </div>
         <div className="flex items-center gap-3">
           <Button variant="secondary" onClick={() => setDebugMode((value) => !value)}>
             <SquareTerminal className="h-4 w-4" />
-            Debug mode {debugMode ? 'ON' : 'OFF'}
+            debug mode {debugMode ? 'on' : 'off'}
           </Button>
           <Button variant="secondary" onClick={() => void refresh()}>
             <RefreshCw className="h-4 w-4" />
-            Refresh
+            refresh
           </Button>
         </div>
       </div>
@@ -137,15 +137,15 @@ export function SystemStateDashboard() {
       {error ? <div className="mt-5 rounded-2xl border border-red-500/20 bg-red-500/10 p-4 text-sm text-red-100">{error}</div> : null}
 
       <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-        <StatCard label="System time" value={formatTime(systemTime?.systemTime ?? null)} delta={systemTime ? formatClock(systemTime.systemTime) : 'Awaiting sync'} tone="neutral" />
+        <StatCard label="system time" value={formatTime(systemTime?.systemTime ?? null)} delta={systemTime ? formatClock(systemTime.systemTime) : 'awaiting sync'} tone="neutral" />
         <StatCard
-          label="Database time"
+          label="database time"
           value={formatTime(systemTime?.databaseTime ?? null)}
-          delta={systemTime?.streamTime ? `Stream ${formatClock(systemTime.streamTime)}` : 'Awaiting sync'}
+          delta={systemTime?.streamTime ? `stream ${formatClock(systemTime.streamTime)}` : 'awaiting sync'}
           tone="neutral"
         />
-        <StatCard label="Live trades" value={String(trades.length)} delta={latestPrice ? `Latest price ${formatCompactNumber(latestPrice)}` : 'No fills yet'} tone="neutral" />
-        <StatCard label="Strategy health" value={String(activeCount)} delta={`${errorCount} errors • ${idleCount} idle`} tone={errorCount > 0 ? 'negative' : 'positive'} />
+        <StatCard label="live trades" value={String(trades.length)} delta={latestPrice ? `latest price ${formatCompactNumber(latestPrice)}` : 'no fills yet'} tone="neutral" />
+        <StatCard label="strategy health" value={String(activeCount)} delta={`${errorCount} errors • ${idleCount} idle`} tone={errorCount > 0 ? 'negative' : 'positive'} />
       </div>
 
       <div className="mt-6 grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
@@ -154,11 +154,11 @@ export function SystemStateDashboard() {
             <div>
               <div className="flex items-center gap-2 text-xs uppercase tracking-[0.24em] text-zinc-500">
                 <Bot className="h-4 w-4 text-sky-300" />
-                Strategy activity
+                strategy activity
               </div>
-              <h2 className="mt-2 text-lg font-semibold text-white">Current state of every live strategy</h2>
+              <h2 className="mt-2 text-lg font-semibold text-white">current state of every live strategy</h2>
             </div>
-            <div className="text-xs uppercase tracking-[0.18em] text-zinc-500">Click a row for debug</div>
+            <div className="text-xs uppercase tracking-[0.18em] text-zinc-500">click a row for debug</div>
           </div>
 
           <div className="space-y-3">
@@ -176,7 +176,7 @@ export function SystemStateDashboard() {
                       <div className="flex items-center gap-2">
                         <span className="text-sm font-semibold text-white">{strategy.strategy}</span>
                         <span className={`rounded-full border px-2 py-0.5 text-[10px] uppercase tracking-[0.12em] ${statusTone(strategy.status)}`}>{statusLabel(strategy.status)}</span>
-                        {strategy.live ? <span className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2 py-0.5 text-[10px] uppercase tracking-[0.12em] text-emerald-200">Live</span> : <span className="rounded-full border border-amber-500/20 bg-amber-500/10 px-2 py-0.5 text-[10px] uppercase tracking-[0.12em] text-amber-200">Planned</span>}
+                        {strategy.live ? <span className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2 py-0.5 text-[10px] uppercase tracking-[0.12em] text-emerald-200">live</span> : <span className="rounded-full border border-amber-500/20 bg-amber-500/10 px-2 py-0.5 text-[10px] uppercase tracking-[0.12em] text-amber-200">planned</span>}
                       </div>
                       <div className="mt-1 text-xs text-zinc-500">
                         {strategy.symbol} • last run {strategy.last_run ? formatClock(strategy.last_run) : '--'} • trades {strategy.trade_count}
@@ -184,12 +184,12 @@ export function SystemStateDashboard() {
                     </div>
                     <div className="text-xs text-zinc-400">
                       <div>
-                        Last signal:{' '}
+                        last signal:{' '}
                         {strategy.last_signal && typeof strategy.last_signal === 'object'
-                          ? String((strategy.last_signal as Record<string, unknown>)['decision'] ?? 'NO TRADE')
-                          : 'NO TRADE'}
+                          ? String((strategy.last_signal as Record<string, unknown>)['decision'] ?? 'no trade')
+                          : 'no trade'}
                       </div>
-                      <div className="mt-1">Reason: {strategy.reason ?? 'Waiting for evaluation'}</div>
+                      <div className="mt-1">reason: {strategy.reason ?? 'waiting for evaluation'}</div>
                     </div>
                   </div>
                 </button>
@@ -204,39 +204,39 @@ export function SystemStateDashboard() {
               <div>
                 <div className="flex items-center gap-2 text-xs uppercase tracking-[0.24em] text-zinc-500">
                   <AlertTriangle className="h-4 w-4 text-amber-300" />
-                  Strategy debug view
+                  strategy debug view
                 </div>
-                <h2 className="mt-2 text-lg font-semibold text-white">Latest input, indicators, signal, and no-trade reason</h2>
+                <h2 className="mt-2 text-lg font-semibold text-white">latest input, indicators, signal, and no-trade reason</h2>
               </div>
-              <div className="text-xs uppercase tracking-[0.18em] text-zinc-500">{debugMode ? 'Raw telemetry visible' : 'Compact view'}</div>
+              <div className="text-xs uppercase tracking-[0.18em] text-zinc-500">{debugMode ? 'raw telemetry visible' : 'compact view'}</div>
             </div>
 
             {selected ? (
               <div className="space-y-4">
                 <div className="grid gap-3 md:grid-cols-2">
-                  <StatCard label="Selected strategy" value={selected.strategy} delta={`${selected.user_id} • ${selected.symbol}`} tone={selected.status === 'error' ? 'negative' : 'neutral'} />
-                  <StatCard label="Runtime status" value={statusLabel(selected.status)} delta={selected.last_run ? `Last run ${formatClock(selected.last_run)}` : 'No heartbeat yet'} tone={selected.status === 'error' ? 'negative' : selected.status === 'active' ? 'positive' : 'neutral'} />
+                  <StatCard label="selected strategy" value={selected.strategy} delta={`${selected.user_id} • ${selected.symbol}`} tone={selected.status === 'error' ? 'negative' : 'neutral'} />
+                  <StatCard label="runtime status" value={statusLabel(selected.status)} delta={selected.last_run ? `last run ${formatClock(selected.last_run)}` : 'no heartbeat yet'} tone={selected.status === 'error' ? 'negative' : selected.status === 'active' ? 'positive' : 'neutral'} />
                 </div>
 
                 <div className="grid gap-3 md:grid-cols-2">
                   <div className="rounded-2xl border border-white/10 bg-black/30 p-4">
-                    <div className="text-[11px] uppercase tracking-[0.18em] text-zinc-500">Latest input</div>
+                    <div className="text-[11px] uppercase tracking-[0.18em] text-zinc-500">latest input</div>
                     <pre className="mt-3 overflow-auto text-xs leading-6 text-zinc-200">{JSON.stringify(selected.latest_input ?? {}, null, 2)}</pre>
                   </div>
                   <div className="rounded-2xl border border-white/10 bg-black/30 p-4">
-                    <div className="text-[11px] uppercase tracking-[0.18em] text-zinc-500">Indicators</div>
+                    <div className="text-[11px] uppercase tracking-[0.18em] text-zinc-500">indicators</div>
                     <pre className="mt-3 overflow-auto text-xs leading-6 text-zinc-200">{JSON.stringify(selected.indicators ?? {}, null, 2)}</pre>
                   </div>
                 </div>
 
                 <div className="grid gap-3 md:grid-cols-2">
                   <div className="rounded-2xl border border-white/10 bg-black/30 p-4">
-                    <div className="text-[11px] uppercase tracking-[0.18em] text-zinc-500">Last signal</div>
+                    <div className="text-[11px] uppercase tracking-[0.18em] text-zinc-500">last signal</div>
                     <pre className="mt-3 overflow-auto text-xs leading-6 text-zinc-200">{JSON.stringify(selected.last_signal ?? {}, null, 2)}</pre>
                   </div>
                   <div className="rounded-2xl border border-white/10 bg-black/30 p-4">
-                    <div className="text-[11px] uppercase tracking-[0.18em] text-zinc-500">Reason for no trade</div>
-                    <p className="mt-3 text-sm leading-6 text-zinc-200">{selected.reason ?? 'The strategy has not emitted a no-trade reason yet.'}</p>
+                    <div className="text-[11px] uppercase tracking-[0.18em] text-zinc-500">reason for no trade</div>
+                    <p className="mt-3 text-sm leading-6 text-zinc-200">{selected.reason ?? 'the strategy has not emitted a no-trade reason yet.'}</p>
                     {selected.error ? <div className="mt-3 rounded-xl border border-red-500/20 bg-red-500/10 p-3 text-sm text-red-100">{selected.error}</div> : null}
                   </div>
                 </div>
@@ -245,7 +245,7 @@ export function SystemStateDashboard() {
                   <div className="rounded-2xl border border-white/10 bg-black/30 p-4">
                     <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.18em] text-zinc-500">
                       <ShieldAlert className="h-4 w-4 text-violet-300" />
-                      Recent events
+                      recent events
                     </div>
                     <div className="mt-3 max-h-[280px] space-y-2 overflow-auto pr-1">
                       {selected.recent_events.length > 0 ? selected.recent_events.map((event) => (
@@ -256,20 +256,20 @@ export function SystemStateDashboard() {
                           </div>
                           <pre className="mt-2 overflow-auto text-[11px] leading-5 text-zinc-200">{JSON.stringify(event.payload, null, 2)}</pre>
                         </div>
-                      )) : <div className="text-sm text-zinc-500">No events received yet.</div>}
+                      )) : <div className="text-sm text-zinc-500">no events received yet.</div>}
                     </div>
                   </div>
                 ) : null}
               </div>
             ) : (
-              <div className="rounded-2xl border border-white/10 bg-black/30 p-4 text-sm text-zinc-400">Select a strategy to inspect its latest runtime telemetry.</div>
+              <div className="rounded-2xl border border-white/10 bg-black/30 p-4 text-sm text-zinc-400">select a strategy to inspect its latest runtime telemetry.</div>
             )}
           </Panel>
 
           <Panel className="p-4">
             <div className="mb-4 flex items-center gap-2 text-xs uppercase tracking-[0.24em] text-zinc-500">
               <Activity className="h-4 w-4 text-emerald-300" />
-              Live trade stream
+              live trade stream
             </div>
             <div className="space-y-3">
               {trades.length > 0 ? trades.map((trade) => (
@@ -282,12 +282,12 @@ export function SystemStateDashboard() {
                       </div>
                     </div>
                     <div className="text-xs text-zinc-400">
-                      <div>{trade.decision ?? 'TRADE EXECUTED'}</div>
+                      <div>{trade.decision ?? 'trade executed'}</div>
                       <div className="mt-1">{trade.reason ?? `${trade.buyer_id} vs ${trade.seller_id}`}</div>
                     </div>
                   </div>
                 </div>
-              )) : <div className="text-sm text-zinc-500">No recent trades available.</div>}
+              )) : <div className="text-sm text-zinc-500">no recent trades available.</div>}
             </div>
           </Panel>
         </div>

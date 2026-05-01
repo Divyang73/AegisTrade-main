@@ -59,7 +59,7 @@ export function StrategyDetailDashboard({ slug }: { slug: string }) {
       setDetail(result);
       setError(null);
     } catch (exception) {
-      setError(exception instanceof Error ? exception.message : 'Failed to load strategy details');
+      setError(exception instanceof Error ? exception.message : 'failed to load strategy details');
     }
   }
 
@@ -134,8 +134,8 @@ export function StrategyDetailDashboard({ slug }: { slug: string }) {
   if (!content) {
     return (
       <Panel className="p-6">
-        <h1 className="text-xl font-semibold text-white">Unknown strategy</h1>
-        <p className="mt-2 text-sm text-zinc-400">No strategy content exists for slug: {slug}</p>
+        <h1 className="text-xl font-semibold text-white">unknown strategy</h1>
+        <p className="mt-2 text-sm text-zinc-400">no strategy content exists for slug: {slug}</p>
       </Panel>
     );
   }
@@ -154,11 +154,11 @@ export function StrategyDetailDashboard({ slug }: { slug: string }) {
           <div className="flex items-center gap-3">
             <Link href={`/learn/${content.slug}`} className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.08] px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/[0.14]">
               <BookOpen className="h-4 w-4" />
-              Learn strategy
+              learn strategy
             </Link>
             <Button variant="secondary" onClick={() => void refresh()}>
               <RefreshCw className="h-4 w-4" />
-              Refresh
+              refresh
             </Button>
           </div>
         </div>
@@ -169,31 +169,31 @@ export function StrategyDetailDashboard({ slug }: { slug: string }) {
 
         <div className="mt-5 grid gap-3 md:grid-cols-3 lg:grid-cols-5">
           <StatCard 
-            label="Total PnL" 
+            label="total pnl" 
             value={metrics ? formatCurrency(metrics.total_pnl) : '--'} 
             tone={metrics && metrics.total_pnl >= 0 ? 'positive' : 'negative'}
             tooltip={tradingGlossary.pnl.definition}
           />
           <StatCard 
-            label="Win Rate" 
+            label="win rate" 
             value={metrics ? formatPercent(metrics.win_rate) : '--'} 
             tone="neutral"
             tooltip={tradingGlossary.winRate.definition}
           />
           <StatCard 
-            label="Sharpe Ratio" 
+            label="sharpe ratio" 
             value={metrics?.sharpe_ratio != null ? formatNumber(metrics.sharpe_ratio) : '--'} 
             tone="neutral"
             tooltip={tradingGlossary.sharpeRatio.howToUse}
           />
           <StatCard 
-            label="Total Trades" 
+            label="total trades" 
             value={metrics ? String(metrics.total_trades) : '--'} 
             tone="neutral"
             tooltip={tradingGlossary.trade.definition}
           />
           <StatCard 
-            label="Drawdown" 
+            label="drawdown" 
             value={metrics ? formatPercent(metrics.drawdown) : '--'} 
             tone="negative"
             tooltip={tradingGlossary.maxDrawdown.definition}

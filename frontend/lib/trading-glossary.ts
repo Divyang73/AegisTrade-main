@@ -257,6 +257,39 @@ export function getTradingGlossary(term: string): GlossaryEntry | undefined {
   return tradingGlossary[term];
 }
 
+const glossaryAliases: Record<string, string> = {
+  'moving-average': 'sma',
+  'trend': 'trendFollowing',
+  'mean-reversion': 'meanReversion',
+  'bollinger-bands': 'bollingerBands',
+  'donchian-channel': 'donchian',
+  'signal-line': 'macd',
+  'exponential': 'ema',
+};
+
+const fallbackDefinitions: Record<string, string> = {
+  bullish: 'a market bias expecting prices to rise.',
+  bearish: 'a market bias expecting prices to fall.',
+  momentum: 'the speed and strength of recent price moves.',
+  extremes: 'price moves far away from a recent average.',
+  'standard-deviation': 'a measure of how spread out prices are.',
+  breakout: 'a move beyond a recent range or resistance.',
+  resistance: 'a price area where sellers often appear.',
+  support: 'a price area where buyers often appear.',
+  acceleration: 'an increase in the rate of price change.',
+  'pairs-trading': 'trading two related assets to capture relative mispricing.',
+  correlation: 'how closely two assets move together.',
+  'market-neutral': 'positioning to reduce exposure to overall market direction.',
+  'z-score': 'a standardized distance from a mean, measured in standard deviations.',
+};
+
+export function getDefinition(term: string): string {
+  const key = glossaryAliases[term] ?? term;
+  const entry = tradingGlossary[key];
+  if (entry) return entry.definition;
+  return fallbackDefinitions[term] ?? `definition for "${term.replace(/-/g, ' ')}" will be added soon.`;
+}
+
 export const tradingTermCategories = {
   markets: ['symbol', 'bid', 'ask', 'spread', 'volume', 'liquidity'],
   orders: ['marketOrder', 'limitOrder'],

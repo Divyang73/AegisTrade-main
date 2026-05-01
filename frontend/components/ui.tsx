@@ -1,4 +1,4 @@
-import type { ButtonHTMLAttributes, HTMLAttributes, InputHTMLAttributes, PropsWithChildren, SelectHTMLAttributes } from 'react';
+import type { ButtonHTMLAttributes, HTMLAttributes, InputHTMLAttributes, PropsWithChildren, ReactNode, SelectHTMLAttributes } from 'react';
 import { Info } from 'lucide-react';
 
 function cn(...classes: Array<string | false | null | undefined>): string {
@@ -113,18 +113,21 @@ export function StatCard({
 }
 
 type TooltipProps = {
-  content: string;
+  content?: string;
   title?: string;
+  definition?: string;
+  children?: ReactNode;
 };
 
-export function Tooltip({ content, title }: TooltipProps) {
+export function Tooltip({ content, title, definition, children }: TooltipProps) {
+  const tooltipContent = content ?? definition ?? '';
+
   return (
-    <div className="group relative inline-flex cursor-help">
-      <Info className="h-3.5 w-3.5 text-zinc-500 transition hover:text-zinc-300" />
-      <div className="pointer-events-none absolute bottom-full left-1/2 mb-2 -translate-x-1/2 transform whitespace-nowrap rounded-lg border border-white/10 bg-gradient-to-b from-white/[0.15] to-white/[0.05] px-3 py-2 text-xs text-white shadow-lg backdrop-blur-xl opacity-0 transition-opacity duration-200 group-hover:pointer-events-auto group-hover:opacity-100">
-        {title && <div className="font-semibold text-emerald-300">{title}</div>}
-        <div className="whitespace-normal max-w-xs">{content}</div>
-        <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-white/[0.15]" />
+    <div className="group relative inline-flex cursor-help items-center align-middle">
+      {children ?? <Info className="h-3.5 w-3.5 shrink-0 text-zinc-500 transition hover:text-zinc-300" />}
+      <div className="pointer-events-none absolute left-1/2 top-full z-50 mt-2 w-max max-w-[18rem] -translate-x-1/2 rounded-xl border border-white/10 bg-zinc-950/95 px-3 py-2 text-xs leading-5 text-white shadow-2xl opacity-0 shadow-black/40 backdrop-blur-xl transition duration-150 group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100">
+        {title ? <div className="mb-1 font-semibold text-emerald-300">{title}</div> : null}
+        <div className="whitespace-normal break-words">{tooltipContent}</div>
       </div>
     </div>
   );
